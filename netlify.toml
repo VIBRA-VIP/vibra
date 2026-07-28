@@ -1,0 +1,20 @@
+# Netlify — Vibra web (apps/web)
+# https://www.netlify.com/
+
+[build]
+  command = "pnpm run build:packages && pnpm --filter @vibra/web build"
+  publish = "apps/web/dist"
+  ignore = "bash scripts/netlify-ignore.sh"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA (React Router): all routes → index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Env needed in Netlify UI (Site settings → Environment variables):
+#   VITE_API_URL  → public API URL (AWS)
+#   VITE_WS_URL   → same URL (Socket.io)

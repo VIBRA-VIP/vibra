@@ -57,25 +57,26 @@ packages/shared Utilidades
 packages/config Presets TypeScript
 ```
 
-## Deploy web (Vercel)
+## Deploy web ([Netlify](https://www.netlify.com/))
 
-1. En [vercel.com](https://vercel.com) → **Add New Project** → importa `VIBRA-VIP/vibra`.
-2. Deja el **Root Directory** en la raíz del monorepo (no `apps/web`).
-3. Vercel usa `vercel.json`:
-   - Install: `pnpm install`
+1. En [app.netlify.com](https://app.netlify.com) → **Add new site** → **Import an existing project** → GitHub `VIBRA-VIP/vibra`.
+2. Base directory: deja la **raíz** del monorepo (Netlify lee `netlify.toml`).
+3. Build / publish ya vienen en `netlify.toml`:
    - Build: packages + `@vibra/web`
-   - Output: `apps/web/dist`
-4. Variables de entorno (Production / Preview):
-   - `VITE_API_URL` → URL pública de la API
+   - Publish: `apps/web/dist`
+4. Variables de entorno (Site settings → Environment variables):
+   - `VITE_API_URL` → URL pública de la API (AWS)
    - `VITE_WS_URL` → misma URL (Socket.io)
+
+La API **no** se despliega en Netlify; va en AWS.
 
 ### Versionado por deploy
 
-Cada push a `main` (excepto commits `chore(release):`) dispara el workflow `.github/workflows/version-tag.yml`:
+Cada push a `main` (excepto commits `chore(release):`) dispara `.github/workflows/version-tag.yml`:
 
 - Sube el patch de `apps/web/package.json` (`0.1.0` → `0.1.1`…)
 - Crea tag git anotado `v0.1.1`
-- Empuja commit + tag (Vercel despliega esa versión)
+- Empuja commit + tag (Netlify despliega esa versión en production)
 
 La app muestra la versión abajo a la derecha / en el sidebar (`v0.1.1+abc1234`).
 

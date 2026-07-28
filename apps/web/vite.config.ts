@@ -10,7 +10,12 @@ const pkg = JSON.parse(readFileSync(path.join(rootDir, 'package.json'), 'utf8'))
   version: string;
 };
 
-const shortSha = (process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? '').slice(0, 7);
+const shortSha = (
+  process.env.COMMIT_REF ??
+  process.env.VERCEL_GIT_COMMIT_SHA ??
+  process.env.GITHUB_SHA ??
+  ''
+).slice(0, 7);
 const appVersion =
   process.env.VITE_APP_VERSION ?? (shortSha ? `${pkg.version}+${shortSha}` : pkg.version);
 
