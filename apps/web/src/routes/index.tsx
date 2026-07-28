@@ -1,0 +1,36 @@
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AppShell, MarketingLayout } from '@/layouts';
+import {
+  AdminPage,
+  ChatsPage,
+  ExplorePage,
+  LandingPage,
+  LoginPage,
+  ProfilePage,
+  RegisterPage,
+} from '@/pages';
+import { ProtectedRoute } from './protected-route';
+
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route element={<MarketingLayout />}>
+        <Route index element={<LandingPage />} />
+      </Route>
+
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />}>
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/chats" element={<ChatsPage />} />
+          <Route path="/profile/:id" element={<ProfilePage />} />
+          <Route path="/admin" element={<AdminPage />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}

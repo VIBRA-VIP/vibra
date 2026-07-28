@@ -1,0 +1,32 @@
+{
+  "name": "vibra",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "db:up": "DOCKER_CONFIG=\"$(pwd)/.docker\" docker compose up -d",
+    "db:down": "DOCKER_CONFIG=\"$(pwd)/.docker\" docker compose down",
+    "db:logs": "DOCKER_CONFIG=\"$(pwd)/.docker\" docker compose logs -f postgres",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "build:packages": "turbo run build --filter=./packages/*"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "pnpm": {
+    "overrides": {
+      "@nestjs/config": "file:vendor/nestjs-config-novscode.tgz"
+    }
+  }
+}

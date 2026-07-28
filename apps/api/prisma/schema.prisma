@@ -1,0 +1,298 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENT
+  MODEL
+  ADMIN
+}
+
+enum MediaType {
+  AVATAR
+  BANNER
+  GALLERY
+  VIDEO
+  CHAT_IMAGE
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  EMOJI
+  SYSTEM
+}
+
+enum TransactionType {
+  PURCHASE
+  CHAT
+  VIDEO_CALL
+  GIFT
+  REFUND
+  ADMIN_ADJUST
+}
+
+enum VideoCallStatus {
+  PENDING
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum NotificationType {
+  MESSAGE
+  VIDEO_CALL
+  FOLLOW
+  SYSTEM
+  CREDITS
+}
+
+enum ProfileGender {
+  FEMALE
+  MALE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  role          UserRole  @default(CLIENT)
+  emailVerified Boolean   @default(false) @map("email_verified")
+  isActive      Boolean   @default(true) @map("is_active")
+  lastSeenAt    DateTime? @map("last_seen_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  profile              Profile?
+  wallet               Wallet?
+  sessions             Session[]
+  media                Media[]
+  conversationMembers  ConversationMember[]
+  messages             Message[]
+  notifications        Notification[]
+  reportsFiled         Report[]             @relation("ReportsFiled")
+  reportsReceived      Report[]             @relation("ReportsReceived")
+  videoCallsAsClient   VideoCall[]          @relation("VideoCallsAsClient")
+  videoCallsAsModel    VideoCall[]          @relation("VideoCallsAsModel")
+  creditTransactions   CreditTransaction[]
+
+  @@index([role])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Profile {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  displayName     String   @map("display_name")
+  username        String   @unique
+  bio             String?
+  avatarUrl       String?  @map("avatar_url")
+  bannerUrl       String?  @map("banner_url")
+  isOnline        Boolean  @default(false) @map("is_online")
+  isAvailable     Boolean  @default(false) @map("is_available")
+  isVerified      Boolean  @default(false) @map("is_verified")
+  rating          Float    @default(0)
+  ratingCount     Int      @default(0) @map("rating_count")
+  chatPricePerMin Int      @default(15) @map("chat_price_per_min")
+  videoPricePerMin Int     @default(80) @map("video_price_per_min")
+  socialLinks     Json?    @map("social_links")
+  tags            String[] @default([])
+  gender          ProfileGender @default(FEMALE)
+  age             Int      @default(18)
+  attributes      Json?
+  services        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isOnline])
+  @@index([isAvailable])
+  @@index([username])
+  @@index([rating])
+  @@index([gender])
+  @@map("profiles")
+}
+
+model Media {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      MediaType
+  url       String
+  key       String
+  mimeType  String?   @map("mime_type")
+  sizeBytes Int?      @map("size_bytes")
+  sortOrder Int       @default(0) @map("sort_order")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("media")
+}
+
+model Conversation {
+  id            String   @id @default(uuid()) @db.Uuid
+  lastMessageAt DateTime? @map("last_message_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  members  ConversationMember[]
+  messages Message[]
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  lastReadAt     DateTime? @map("last_read_at")
+  joinedAt       DateTime  @default(now()) @map("joined_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  senderId       String      @map("sender_id") @db.Uuid
+  type           MessageType @default(TEXT)
+  content        String
+  mediaUrl       String?     @map("media_url")
+  isRead         Boolean     @default(false) @map("is_read")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Wallet {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  balance   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions CreditTransaction[]
+
+  @@map("wallets")
+}
+
+model CreditTransaction {
+  id          String          @id @default(uuid()) @db.Uuid
+  walletId    String          @map("wallet_id") @db.Uuid
+  userId      String          @map("user_id") @db.Uuid
+  type        TransactionType
+  amount      Int
+  balanceAfter Int            @map("balance_after")
+  description String?
+  referenceId String?         @map("reference_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([walletId])
+  @@index([type])
+  @@map("credit_transactions")
+}
+
+model VideoCall {
+  id           String          @id @default(uuid()) @db.Uuid
+  clientId     String          @map("client_id") @db.Uuid
+  modelId      String          @map("model_id") @db.Uuid
+  roomName     String          @unique @map("room_name")
+  status       VideoCallStatus @default(PENDING)
+  pricePerMin  Int             @map("price_per_min")
+  creditsSpent Int             @default(0) @map("credits_spent")
+  startedAt    DateTime?       @map("started_at")
+  endedAt      DateTime?       @map("ended_at")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  client User @relation("VideoCallsAsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  model  User @relation("VideoCallsAsModel", fields: [modelId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([modelId])
+  @@index([status])
+  @@map("video_calls")
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+model Report {
+  id          String       @id @default(uuid()) @db.Uuid
+  reporterId  String       @map("reporter_id") @db.Uuid
+  reportedId  String       @map("reported_id") @db.Uuid
+  reason      String
+  details     String?
+  status      ReportStatus @default(OPEN)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  reporter User @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported User @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([reportedId])
+  @@map("reports")
+}
+
+model Session {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  refreshTokenHash String   @map("refresh_token_hash")
+  userAgent        String?  @map("user_agent")
+  ipAddress        String?  @map("ip_address")
+  expiresAt        DateTime @map("expires_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  revokedAt        DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}

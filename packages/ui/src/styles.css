@@ -1,0 +1,13 @@
+:root {
+  --vibra-bg: #0a0a0a;
+  --vibra-bg-elevated: #141414;
+  --vibra-bg-muted: #1a1a1a;
+  --vibra-pink: #ff1493;
+  --vibra-pink-hover: #ff3daa;
+  --vibra-gold: #f5c518;
+  --vibra-online: #22c55e;
+  --vibra-text: #ffffff;
+  --vibra-text-muted: #a1a1aa;
+  --vibra-border: #27272a;
+  --vibra-radius: 0.75rem;
+}
