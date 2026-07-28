@@ -57,6 +57,34 @@ packages/shared Utilidades
 packages/config Presets TypeScript
 ```
 
+## Deploy web (Vercel)
+
+1. En [vercel.com](https://vercel.com) → **Add New Project** → importa `VIBRA-VIP/vibra`.
+2. Deja el **Root Directory** en la raíz del monorepo (no `apps/web`).
+3. Vercel usa `vercel.json`:
+   - Install: `pnpm install`
+   - Build: packages + `@vibra/web`
+   - Output: `apps/web/dist`
+4. Variables de entorno (Production / Preview):
+   - `VITE_API_URL` → URL pública de la API
+   - `VITE_WS_URL` → misma URL (Socket.io)
+
+### Versionado por deploy
+
+Cada push a `main` (excepto commits `chore(release):`) dispara el workflow `.github/workflows/version-tag.yml`:
+
+- Sube el patch de `apps/web/package.json` (`0.1.0` → `0.1.1`…)
+- Crea tag git anotado `v0.1.1`
+- Empuja commit + tag (Vercel despliega esa versión)
+
+La app muestra la versión abajo a la derecha / en el sidebar (`v0.1.1+abc1234`).
+
+Tag manual:
+
+```bash
+pnpm release:web
+```
+
 ## Notas
 
 - `DATABASE_URL` usa el puerto **5433** porque muchas máquinas ya tienen Postgres en 5432.

@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Compass, MessageCircle, Users, Coins, LogOut } from 'lucide-react';
-import { Logo } from '@/components';
+import { AppVersion, Logo } from '@/components';
 import { logoutRequest } from '@/features/auth';
 import { useAuthStore } from '@/store';
 import { cn } from '@/utils';
@@ -87,6 +87,7 @@ export function AppShell() {
               <LogOut className="h-4 w-4" />
             </button>
           </div>
+          <AppVersion />
         </div>
       </aside>
 

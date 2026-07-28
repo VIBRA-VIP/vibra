@@ -10,7 +10,8 @@
     "db:down": "DOCKER_CONFIG=\"$(pwd)/.docker\" docker compose down",
     "db:logs": "DOCKER_CONFIG=\"$(pwd)/.docker\" docker compose logs -f postgres",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "build:packages": "turbo run build --filter=./packages/*"
+    "build:packages": "turbo run build --filter=./packages/*",
+    "release:web": "bash scripts/release-web-tag.sh"
   },
   "devDependencies": {
     "prettier": "^3.4.2",
