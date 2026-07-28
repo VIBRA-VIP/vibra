@@ -18,7 +18,8 @@ BUNDLE_ID="${LIGHTSAIL_BUNDLE_ID:-small_3_0}" # ~2GB RAM
 BLUEPRINT_ID="${LIGHTSAIL_BLUEPRINT_ID:-ubuntu_24_04}"
 AVAILABILITY_ZONE="${LIGHTSAIL_AZ:-${REGION}a}"
 KEY_PAIR_NAME="${LIGHTSAIL_KEY_PAIR_NAME:-vibra-lightsail}"
-KEY_FILE="${LIGHTSAIL_KEY_FILE:-$HOME/.ssh/${KEY_PAIR_NAME}.pem}"
+# Local OpenSSH key (generated here, public key imported into Lightsail)
+KEY_FILE="${LIGHTSAIL_KEY_FILE:-$HOME/.ssh/${KEY_PAIR_NAME}}"
 API_PORT="${API_PORT:-3000}"
 WEB_URL="${WEB_URL:-}"
 
@@ -32,6 +33,7 @@ need_cmd() {
 need_cmd aws
 need_cmd ssh
 need_cmd scp
+need_cmd python3
 need_cmd openssl
 need_cmd rsync
 need_cmd curl
@@ -47,24 +49,54 @@ fi
 
 mkdir -p "$(dirname "$KEY_FILE")"
 
-if ! aws lightsail get-key-pair --key-pair-name "$KEY_PAIR_NAME" --region "$REGION" >/dev/null 2>&1; then
+# Create key in Lightsail and save private key locally.
+# Note: despite the name, privateKeyBase64 is often already PEM text (not base64).
+if [[ ! -f "$KEY_FILE" ]]; then
+  if aws lightsail get-key-pair --key-pair-name "$KEY_PAIR_NAME" --region "$REGION" >/dev/null 2>&1; then
+    echo "Lightsail key '$KEY_PAIR_NAME' exists but local private key is missing: $KEY_FILE" >&2
+    echo "Delete it and retry: aws lightsail delete-key-pair --key-pair-name $KEY_PAIR_NAME --region $REGION" >&2
+    exit 1
+  fi
+
   echo "==> Creating Lightsail key pair: $KEY_PAIR_NAME"
-  PRIV_B64="$(aws lightsail create-key-pair \
+  TMPJSON="$(mktemp)"
+  aws lightsail create-key-pair \
     --key-pair-name "$KEY_PAIR_NAME" \
     --region "$REGION" \
-    --query 'privateKeyBase64' \
-    --output text)"
-  if base64 -d <<<"$PRIV_B64" >"$KEY_FILE" 2>/dev/null; then
-    :
-  else
-    base64 -D <<<"$PRIV_B64" >"$KEY_FILE"
-  fi
-  chmod 600 "$KEY_FILE"
+    --output json >"$TMPJSON"
+
+  KEY_FILE="$KEY_FILE" TMPJSON="$TMPJSON" python3 - <<'PY'
+import base64, json, os, pathlib
+data = json.load(open(os.environ["TMPJSON"]))
+val = data["privateKeyBase64"]
+path = pathlib.Path(os.environ["KEY_FILE"])
+
+def save_text(text: str) -> None:
+    if not text.endswith("\n"):
+        text += "\n"
+    path.write_text(text)
+    path.chmod(0o600)
+
+if isinstance(val, str) and "BEGIN" in val[:80]:
+    save_text(val.strip() + "\n")
+    print(f"Saved PEM directly to {path} ({path.stat().st_size} bytes)")
+else:
+    raw = base64.b64decode(val)
+    if raw.lstrip().startswith(b"-----BEGIN"):
+        save_text(raw.decode("ascii"))
+        print(f"Saved base64-decoded PEM to {path} ({path.stat().st_size} bytes)")
+    else:
+        raise SystemExit(
+            "Could not parse Lightsail private key as PEM. "
+            f"prefix={raw[:40]!r}"
+        )
+PY
+  rm -f "$TMPJSON"
 else
-  echo "==> Key pair exists: $KEY_PAIR_NAME"
-  if [[ ! -f "$KEY_FILE" ]]; then
-    echo "Private key missing at $KEY_FILE" >&2
-    echo "Set LIGHTSAIL_KEY_PAIR_NAME to a new name, or restore the .pem file." >&2
+  echo "==> Using existing local key: $KEY_FILE"
+  if ! aws lightsail get-key-pair --key-pair-name "$KEY_PAIR_NAME" --region "$REGION" >/dev/null 2>&1; then
+    echo "Local key exists but Lightsail key pair '$KEY_PAIR_NAME' is missing." >&2
+    echo "Remove local key and re-run." >&2
     exit 1
   fi
 fi

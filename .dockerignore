@@ -13,7 +13,8 @@ build
 !**/.env.example
 *.log
 install*.log
-apps/web
+apps/web/**
+!apps/web/package.json
 apps/api/dist
 packages/*/dist
 .DS_Store
