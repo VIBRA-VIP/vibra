@@ -1,0 +1,55 @@
+# Production stack: API + Postgres (AWS Lightsail / EC2)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vibra-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vibra}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-vibra}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibra} -d ${POSTGRES_DB:-vibra}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - vibra
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vibra-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vibra}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vibra}?schema=public
+      API_PORT: 3000
+      API_URL: ${API_URL:?set API_URL}
+      WEB_URL: ${WEB_URL:?set WEB_URL}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - vibra
+
+volumes:
+  postgres_data:
+
+networks:
+  vibra:
+    driver: bridge

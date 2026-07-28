@@ -86,7 +86,47 @@ Tag manual:
 pnpm release:web
 ```
 
+## Deploy API + DB (AWS Lightsail)
+
+Stack barato: **1 instancia Lightsail** con Docker (Nest API + Postgres).
+
+### 1) Credenciales AWS (una vez)
+
+En la consola AWS → **IAM** → Users → tu usuario → **Security credentials** → **Create access key** (CLI).
+
+```bash
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+aws configure
+# Access Key ID / Secret
+# Default region: us-east-2
+# Output: json
+```
+
+Comprueba:
+
+```bash
+aws sts get-caller-identity
+```
+
+### 2) Lanzar
+
+```bash
+export WEB_URL=https://TU-SITIO.netlify.app   # URL de Netlify
+bash scripts/deploy-lightsail.sh
+```
+
+El script crea la instancia, abre puertos 22/3000, sube el código, levanta API + Postgres y deja `/health` público.
+
+### 3) Conectar Netlify
+
+En Netlify → Environment variables:
+
+- `VITE_API_URL` = `http://IP:3000` (la que imprime el script)
+- `VITE_WS_URL` = la misma
+
+Luego un nuevo deploy del web.
+
 ## Notas
 
-- `DATABASE_URL` usa el puerto **5433** porque muchas máquinas ya tienen Postgres en 5432.
+- `DATABASE_URL` local usa el puerto **5433** porque muchas máquinas ya tienen Postgres en 5432.
 - Los scripts `db:*` usan `DOCKER_CONFIG` del repo (plugin Compose incluido).
