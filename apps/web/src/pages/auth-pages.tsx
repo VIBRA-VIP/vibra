@@ -175,18 +175,15 @@ export function RegisterPage() {
           ))}
         </div>
 
-        <label className="block text-sm text-zinc-400">
-          Género
-          <select
-            required
-            value={gender}
-            onChange={(e) => setGender(e.target.value as 'FEMALE' | 'MALE')}
-            className={`${inputClass} mt-1`}
-          >
-            <option value="FEMALE">Femenino</option>
-            <option value="MALE">Masculino</option>
-          </select>
-        </label>
+        <select
+          required
+          value={gender}
+          onChange={(e) => setGender(e.target.value as 'FEMALE' | 'MALE')}
+          className={inputClass}
+        >
+          <option value="FEMALE">Femenino</option>
+          <option value="MALE">Masculino</option>
+        </select>
 
         <input
           type="text"
@@ -221,10 +218,7 @@ export function RegisterPage() {
             onChange={(e) => setAcceptedTerms(e.target.checked)}
             className="mt-1"
           />
-          <span>
-            Acepto términos y condiciones y confirmo que soy mayor de <strong>18 años</strong>. El
-            usuario público se generará automáticamente para proteger tu identidad.
-          </span>
+          <span>Acepto términos y condiciones y confirmo que soy mayor de 18 años.</span>
         </label>
 
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
