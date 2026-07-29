@@ -27,6 +27,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(rootDir, './src'),
+      '@vibra/shared': path.resolve(rootDir, '../../packages/shared/src/index.ts'),
+      '@vibra/types': path.resolve(rootDir, '../../packages/types/src/index.ts'),
     },
   },
   server: {
