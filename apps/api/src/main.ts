@@ -10,10 +10,25 @@ async function bootstrap() {
   const config = app.get(ConfigService<Env, true>);
   const port = config.get('API_PORT', { infer: true });
   const webUrl = config.get('WEB_URL', { infer: true });
+  const corsOrigins = webUrl
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 
   app.enableCors({
-    origin: webUrl,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin || corsOrigins.includes(origin) || corsOrigins.includes('*')) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   app.useGlobalPipes(

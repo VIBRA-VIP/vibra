@@ -9,12 +9,15 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# SPA (React Router): all routes → index.html
+# Proxy API through Netlify (HTTPS → Lightsail). Must be BEFORE the SPA fallback.
+[[redirects]]
+  from = "/api/*"
+  to = "http://3.17.154.80:3000/api/:splat"
+  status = 200
+  force = true
+
+# SPA (React Router)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Env needed in Netlify UI (Site settings → Environment variables):
-#   VITE_API_URL  → public API URL (AWS)
-#   VITE_WS_URL   → same URL (Socket.io)

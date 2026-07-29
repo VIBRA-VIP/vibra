@@ -1,7 +1,25 @@
 import axios from 'axios';
 
+/**
+ * On HTTPS sites (Netlify), never call http://API directly (browser blocks mixed content).
+ * Use same-origin `/api/*` which Netlify proxies to Lightsail.
+ */
+function resolveBaseUrl(): string {
+  const raw = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && raw.startsWith('http:')) {
+    return '';
+  }
+
+  if (!raw) {
+    return '';
+  }
+
+  return raw;
+}
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
+  baseURL: resolveBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

@@ -7,7 +7,22 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   API_PORT: z.coerce.number().default(3000),
   API_URL: z.string().url().default('http://localhost:3000'),
-  WEB_URL: z.string().url().default('http://localhost:5173'),
+  WEB_URL: z
+    .string()
+    .min(1)
+    .default('http://localhost:5173')
+    .refine(
+      (value) =>
+        value.split(',').every((part) => {
+          try {
+            new URL(part.trim());
+            return true;
+          } catch {
+            return part.trim() === '*';
+          }
+        }),
+      { message: 'WEB_URL must be a URL or comma-separated URLs' },
+    ),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),

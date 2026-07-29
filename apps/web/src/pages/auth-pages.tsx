@@ -63,7 +63,7 @@ export function LoginPage() {
 
   return (
     <AuthCard title="Iniciar sesión" subtitle="Accede a tu cuenta Vibra">
-      <form className="space-y-4" onSubmit={onSubmit}>
+      <form className="space-y-4" method="post" onSubmit={onSubmit}>
         <input
           type="email"
           required
@@ -140,7 +140,7 @@ export function RegisterPage() {
 
   return (
     <AuthCard title="Crear cuenta" subtitle="Únete a Vibra en segundos">
-      <form className="space-y-4" onSubmit={onSubmit}>
+      <form className="space-y-4" method="post" onSubmit={onSubmit}>
         <input
           type="text"
           required
