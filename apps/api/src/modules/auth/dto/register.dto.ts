@@ -1,12 +1,10 @@
 import {
   IsBoolean,
   IsEmail,
-  IsEnum,
   IsIn,
   IsString,
   MaxLength,
   MinLength,
-  ValidateIf,
 } from 'class-validator';
 import { ProfileGender, UserRole } from '@prisma/client';
 
@@ -27,9 +25,8 @@ export class RegisterDto {
   @IsIn([UserRole.CLIENT, UserRole.MODEL])
   role!: UserRole;
 
-  @ValidateIf((o: RegisterDto) => o.role === UserRole.MODEL)
-  @IsEnum(ProfileGender)
-  gender?: ProfileGender;
+  @IsIn([ProfileGender.FEMALE, ProfileGender.MALE])
+  gender!: ProfileGender;
 
   @IsBoolean()
   acceptedTerms!: boolean;

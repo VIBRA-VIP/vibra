@@ -42,7 +42,7 @@ export async function registerRequest(payload: {
   password: string;
   displayName: string;
   role: 'CLIENT' | 'MODEL';
-  gender?: 'FEMALE' | 'MALE';
+  gender: 'FEMALE' | 'MALE';
   acceptedTerms: boolean;
 }) {
   const { data } = await api.post<AuthResponse>('/api/auth/register', payload);

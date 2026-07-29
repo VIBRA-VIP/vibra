@@ -135,7 +135,7 @@ export function RegisterPage() {
         password,
         displayName,
         role,
-        gender: role === 'MODEL' ? gender : undefined,
+        gender,
         acceptedTerms: true,
       });
       setAuth(res.user, res.accessToken, res.refreshToken);
@@ -175,29 +175,18 @@ export function RegisterPage() {
           ))}
         </div>
 
-        {role === 'MODEL' ? (
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { id: 'FEMALE' as const, label: 'Femenino' },
-                { id: 'MALE' as const, label: 'Masculino' },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setGender(opt.id)}
-                className={`rounded-xl border px-3 py-3 text-sm font-medium transition ${
-                  gender === opt.id
-                    ? 'border-vibra-pink bg-vibra-pink/15 text-white'
-                    : 'border-vibra-border text-zinc-400 hover:text-white'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <label className="block text-sm text-zinc-400">
+          Género
+          <select
+            required
+            value={gender}
+            onChange={(e) => setGender(e.target.value as 'FEMALE' | 'MALE')}
+            className={`${inputClass} mt-1`}
+          >
+            <option value="FEMALE">Femenino</option>
+            <option value="MALE">Masculino</option>
+          </select>
+        </label>
 
         <input
           type="text"

@@ -45,13 +45,7 @@ export class AuthService {
 
     const email = dto.email.toLowerCase().trim();
     const role = dto.role === UserRole.MODEL ? UserRole.MODEL : UserRole.CLIENT;
-
-    const gender =
-      role === UserRole.MODEL
-        ? dto.gender === ProfileGender.MALE
-          ? ProfileGender.MALE
-          : ProfileGender.FEMALE
-        : ProfileGender.OTHER;
+    const gender = dto.gender === ProfileGender.MALE ? ProfileGender.MALE : ProfileGender.FEMALE;
 
     const existingEmail = await this.prisma.user.findUnique({ where: { email } });
     if (existingEmail) {
