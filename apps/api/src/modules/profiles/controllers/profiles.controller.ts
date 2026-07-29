@@ -1,5 +1,11 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import {
+  CompleteProfileDto,
+  UpdatePayoutDto,
+  UpdateSettingsDto,
+} from '../dto/profile-setup.dto';
 import { ProfilesService } from '../services/profiles.service';
 
 @Controller('profiles')
@@ -9,6 +15,30 @@ export class ProfilesController {
   @Get('health')
   health() {
     return this.profilesService.health();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  me(@CurrentUser() user: { id: string }) {
+    return this.profilesService.getMine(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('complete')
+  complete(@CurrentUser() user: { id: string }, @Body() body: CompleteProfileDto) {
+    return this.profilesService.completeProfile(user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('settings')
+  settings(@CurrentUser() user: { id: string }, @Body() body: UpdateSettingsDto) {
+    return this.profilesService.updateSettings(user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('payout')
+  payout(@CurrentUser() user: { id: string }, @Body() body: UpdatePayoutDto) {
+    return this.profilesService.updatePayout(user.id, body);
   }
 
   @UseGuards(JwtAuthGuard)

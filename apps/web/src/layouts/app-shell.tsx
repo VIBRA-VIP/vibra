@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Compass, MessageCircle, Users, Coins, LogOut } from 'lucide-react';
+import { Compass, MessageCircle, Users, Coins, LogOut, Settings } from 'lucide-react';
 import { AppVersion, Logo } from '@/components';
 import { logoutRequest } from '@/features/auth';
 import { useAuthStore } from '@/store';
@@ -9,6 +9,7 @@ const nav = [
   { to: '/explore', label: 'Explorar', icon: Compass },
   { to: '/explore', label: 'Personas', icon: Users },
   { to: '/chats', label: 'Chats', icon: MessageCircle, badge: 0 },
+  { to: '/settings', label: 'Ajustes', icon: Settings },
 ];
 
 export function AppShell() {

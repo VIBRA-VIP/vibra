@@ -58,6 +58,14 @@ enum ProfileGender {
   OTHER
 }
 
+enum PayoutProvider {
+  NEQUI
+  BANCOLOMBIA
+  DAVIVIENDA
+  BBVA
+  OTRO
+}
+
 enum ReportStatus {
   OPEN
   REVIEWING
@@ -72,6 +80,7 @@ model User {
   role          UserRole  @default(CLIENT)
   emailVerified Boolean   @default(false) @map("email_verified")
   isActive      Boolean   @default(true) @map("is_active")
+  acceptedTermsAt DateTime? @map("accepted_terms_at")
   lastSeenAt    DateTime? @map("last_seen_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -105,16 +114,23 @@ model Profile {
   isOnline        Boolean  @default(false) @map("is_online")
   isAvailable     Boolean  @default(false) @map("is_available")
   isVerified      Boolean  @default(false) @map("is_verified")
+  profileCompleted Boolean @default(false) @map("profile_completed")
   rating          Float    @default(0)
   ratingCount     Int      @default(0) @map("rating_count")
   chatPricePerMin Int      @default(15) @map("chat_price_per_min")
   videoPricePerMin Int     @default(80) @map("video_price_per_min")
+  messagePrice    Int      @default(10) @map("message_price")
+  contentPrice    Int      @default(100) @map("content_price")
+  acceptsEncounters Boolean @default(false) @map("accepts_encounters")
   socialLinks     Json?    @map("social_links")
   tags            String[] @default([])
   gender          ProfileGender @default(FEMALE)
   age             Int      @default(18)
   attributes      Json?
   services        Json?
+  payoutProvider  PayoutProvider? @map("payout_provider")
+  payoutAccount   String?  @map("payout_account")
+  payoutHolder    String?  @map("payout_holder")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
@@ -125,6 +141,7 @@ model Profile {
   @@index([username])
   @@index([rating])
   @@index([gender])
+  @@index([profileCompleted])
   @@map("profiles")
 }
 

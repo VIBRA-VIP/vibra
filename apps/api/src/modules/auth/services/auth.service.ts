@@ -2,10 +2,18 @@ import {
   ConflictException,
   Injectable,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UserRole, type Profile, type User, type Wallet } from '@prisma/client';
+import {
+  ProfileGender,
+  UserRole,
+  type Profile,
+  type User,
+  type Wallet,
+} from '@prisma/client';
+import { inventUsername } from '@vibra/shared';
 import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../../../database/prisma.service';
@@ -31,19 +39,26 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    const email = dto.email.toLowerCase().trim();
-    const username = dto.username.toLowerCase().trim();
-    const role = dto.role === UserRole.MODEL ? UserRole.MODEL : UserRole.CLIENT;
-
-    const existing = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email }, { profile: { username } }],
-      },
-    });
-    if (existing) {
-      throw new ConflictException('El correo o usuario ya está registrado');
+    if (!dto.acceptedTerms) {
+      throw new BadRequestException('Debes aceptar términos y ser mayor de 18 años');
     }
 
+    const email = dto.email.toLowerCase().trim();
+    const role = dto.role === UserRole.MODEL ? UserRole.MODEL : UserRole.CLIENT;
+
+    const gender =
+      role === UserRole.MODEL
+        ? dto.gender === ProfileGender.MALE
+          ? ProfileGender.MALE
+          : ProfileGender.FEMALE
+        : ProfileGender.OTHER;
+
+    const existingEmail = await this.prisma.user.findUnique({ where: { email } });
+    if (existingEmail) {
+      throw new ConflictException('El correo ya está registrado');
+    }
+
+    const username = await this.allocateUsername(dto.displayName);
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
     const user = await this.prisma.user.create({
@@ -51,14 +66,17 @@ export class AuthService {
         email,
         passwordHash,
         role,
+        acceptedTermsAt: new Date(),
         profile: {
           create: {
             displayName: dto.displayName.trim(),
             username,
+            gender,
+            profileCompleted: false,
           },
         },
         wallet: {
-          create: { balance: 100 },
+          create: { balance: role === UserRole.CLIENT ? 100 : 0 },
         },
       },
       include: { profile: true, wallet: true },
@@ -107,6 +125,15 @@ export class AuthService {
     return { ok: true };
   }
 
+  private async allocateUsername(displayName: string) {
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const candidate = inventUsername(`${displayName}-${attempt}-${Date.now()}`);
+      const taken = await this.prisma.profile.findUnique({ where: { username: candidate } });
+      if (!taken) return candidate;
+    }
+    return inventUsername(`${Date.now()}-${Math.random()}`);
+  }
+
   private async buildAuthResponse(user: UserWithRelations) {
     const tokens = await this.issueTokens(user.id, user.email, user.role);
     return {
@@ -148,6 +175,7 @@ export class AuthService {
       email: user.email,
       role: user.role,
       emailVerified: user.emailVerified,
+      acceptedTermsAt: user.acceptedTermsAt?.toISOString() ?? null,
       createdAt: user.createdAt.toISOString(),
       profile: user.profile
         ? {
@@ -155,9 +183,23 @@ export class AuthService {
             displayName: user.profile.displayName,
             username: user.profile.username,
             avatarUrl: user.profile.avatarUrl,
+            bio: user.profile.bio,
+            gender: user.profile.gender,
+            tags: user.profile.tags,
+            profileCompleted: user.profile.profileCompleted,
+            chatPricePerMin: user.profile.chatPricePerMin,
+            videoPricePerMin: user.profile.videoPricePerMin,
+            messagePrice: user.profile.messagePrice,
+            contentPrice: user.profile.contentPrice,
+            acceptsEncounters: user.profile.acceptsEncounters,
+            attributes: (user.profile.attributes as Record<string, unknown> | null) ?? {},
+            payoutProvider: user.profile.payoutProvider,
+            payoutAccount: user.profile.payoutAccount,
+            payoutHolder: user.profile.payoutHolder,
           }
         : null,
       walletBalance: user.wallet?.balance ?? 0,
+      needsOnboarding: !(user.profile?.profileCompleted ?? false),
     };
   }
 }

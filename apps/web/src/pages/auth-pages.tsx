@@ -49,6 +49,10 @@ export function LoginPage() {
     try {
       const res = await loginRequest({ email, password });
       setAuth(res.user, res.accessToken, res.refreshToken);
+      if (res.user.needsOnboarding) {
+        navigate('/onboarding', { replace: true });
+        return;
+      }
       const from = (location.state as { from?: string } | null)?.from ?? '/explore';
       navigate(from, { replace: true });
     } catch (err: unknown) {
@@ -104,10 +108,12 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const [role, setRole] = useState<'CLIENT' | 'MODEL'>('CLIENT');
+  const [gender, setGender] = useState<'FEMALE' | 'MALE'>('FEMALE');
   const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -118,16 +124,22 @@ export function RegisterPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!acceptedTerms) {
+      setError('Debes aceptar términos y confirmar que eres mayor de 18 años');
+      return;
+    }
     setLoading(true);
     try {
       const res = await registerRequest({
         email,
         password,
-        username,
-        displayName: displayName || username,
+        displayName,
+        role,
+        gender: role === 'MODEL' ? gender : undefined,
+        acceptedTerms: true,
       });
       setAuth(res.user, res.accessToken, res.refreshToken);
-      navigate('/explore', { replace: true });
+      navigate('/onboarding', { replace: true });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
@@ -139,24 +151,60 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthCard title="Crear cuenta" subtitle="Únete a Vibra en segundos">
+    <AuthCard title="Crear cuenta" subtitle="Solo correo, contraseña y tu nombre">
       <form className="space-y-4" method="post" onSubmit={onSubmit}>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              { id: 'CLIENT' as const, label: 'Usuario' },
+              { id: 'MODEL' as const, label: 'Modelo' },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setRole(opt.id)}
+              className={`rounded-xl border px-3 py-3 text-sm font-medium transition ${
+                role === opt.id
+                  ? 'border-vibra-pink bg-vibra-pink/15 text-white'
+                  : 'border-vibra-border text-zinc-400 hover:text-white'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {role === 'MODEL' ? (
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { id: 'FEMALE' as const, label: 'Femenino' },
+                { id: 'MALE' as const, label: 'Masculino' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setGender(opt.id)}
+                className={`rounded-xl border px-3 py-3 text-sm font-medium transition ${
+                  gender === opt.id
+                    ? 'border-vibra-pink bg-vibra-pink/15 text-white'
+                    : 'border-vibra-border text-zinc-400 hover:text-white'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <input
           type="text"
           required
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="Nombre"
-          className={inputClass}
-        />
-        <input
-          type="text"
-          required
-          pattern="[a-zA-Z0-9_]+"
-          minLength={3}
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Usuario"
+          placeholder="Nombre completo"
           className={inputClass}
         />
         <input
@@ -176,6 +224,20 @@ export function RegisterPage() {
           placeholder="Contraseña (mín. 8)"
           className={inputClass}
         />
+
+        <label className="flex items-start gap-3 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            Acepto términos y condiciones y confirmo que soy mayor de <strong>18 años</strong>. El
+            usuario público se generará automáticamente para proteger tu identidad.
+          </span>
+        </label>
+
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
         <button
           type="submit"

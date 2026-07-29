@@ -1,5 +1,14 @@
-import { IsEmail, IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
-import { UserRole } from '@prisma/client';
+import {
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsIn,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
+import { ProfileGender, UserRole } from '@prisma/client';
 
 export class RegisterDto {
   @IsEmail()
@@ -11,17 +20,17 @@ export class RegisterDto {
   password!: string;
 
   @IsString()
-  @MinLength(3)
-  @MaxLength(30)
-  @Matches(/^[a-zA-Z0-9_]+$/, { message: 'username solo permite letras, números y _' })
-  username!: string;
-
-  @IsString()
   @MinLength(2)
-  @MaxLength(50)
+  @MaxLength(80)
   displayName!: string;
 
-  @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
+  @IsIn([UserRole.CLIENT, UserRole.MODEL])
+  role!: UserRole;
+
+  @ValidateIf((o: RegisterDto) => o.role === UserRole.MODEL)
+  @IsEnum(ProfileGender)
+  gender?: ProfileGender;
+
+  @IsBoolean()
+  acceptedTerms!: boolean;
 }
