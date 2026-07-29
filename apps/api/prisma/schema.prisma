@@ -58,12 +58,9 @@ enum ProfileGender {
   OTHER
 }
 
-enum PayoutProvider {
-  NEQUI
-  BANCOLOMBIA
-  DAVIVIENDA
-  BBVA
-  OTRO
+enum PayoutAccountType {
+  AHORROS
+  CORRIENTE
 }
 
 enum ReportStatus {
@@ -128,7 +125,8 @@ model Profile {
   age             Int      @default(18)
   attributes      Json?
   services        Json?
-  payoutProvider  PayoutProvider? @map("payout_provider")
+  payoutBankId    Int?     @map("payout_bank_id")
+  payoutAccountType PayoutAccountType? @map("payout_account_type")
   payoutAccount   String?  @map("payout_account")
   payoutHolder    String?  @map("payout_holder")
   createdAt       DateTime @default(now()) @map("created_at")

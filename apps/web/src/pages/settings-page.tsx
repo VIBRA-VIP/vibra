@@ -1,5 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { PAYOUT_PROVIDERS } from '@vibra/shared';
+import {
+  COLOMBIA_PAYOUT_OPTIONS,
+  PAYOUT_ACCOUNT_TYPES,
+  colombiaBanks,
+  colombiaWallets,
+} from '@vibra/shared';
 import { meRequest } from '@/features/auth';
 import {
   getMyProfile,
@@ -26,7 +31,10 @@ export function SettingsPage() {
   const [acceptsEncounters, setAcceptsEncounters] = useState(
     user?.profile?.acceptsEncounters ?? false,
   );
-  const [payoutProvider, setPayoutProvider] = useState(user?.profile?.payoutProvider ?? 'NEQUI');
+  const [payoutBankId, setPayoutBankId] = useState<number>(user?.profile?.payoutBankId ?? 1);
+  const [payoutAccountType, setPayoutAccountType] = useState<'AHORROS' | 'CORRIENTE'>(
+    (user?.profile?.payoutAccountType as 'AHORROS' | 'CORRIENTE') ?? 'AHORROS',
+  );
   const [payoutAccount, setPayoutAccount] = useState(user?.profile?.payoutAccount ?? '');
   const [payoutHolder, setPayoutHolder] = useState(user?.profile?.payoutHolder ?? '');
   const [message, setMessage] = useState<string | null>(null);
@@ -44,7 +52,10 @@ export function SettingsPage() {
         setVideoPricePerMin(Number(profile.videoPricePerMin ?? 80));
         setContentPrice(Number(profile.contentPrice ?? 100));
         setAcceptsEncounters(Boolean(profile.acceptsEncounters));
-        setPayoutProvider(String(profile.payoutProvider ?? 'NEQUI'));
+        setPayoutBankId(Number(profile.payoutBankId ?? 1));
+        setPayoutAccountType(
+          (profile.payoutAccountType as 'AHORROS' | 'CORRIENTE') ?? 'AHORROS',
+        );
         setPayoutAccount(String(profile.payoutAccount ?? ''));
         setPayoutHolder(String(profile.payoutHolder ?? ''));
       })
@@ -87,7 +98,8 @@ export function SettingsPage() {
     setMessage(null);
     try {
       await updatePayoutRequest({
-        payoutProvider,
+        payoutBankId,
+        payoutAccountType,
         payoutAccount,
         payoutHolder,
       });
@@ -113,7 +125,10 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <form className="space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5" onSubmit={saveProfile}>
+      <form
+        className="space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
+        onSubmit={saveProfile}
+      >
         <h2 className="font-display text-lg font-semibold">Perfil</h2>
         <input
           className={inputClass}
@@ -199,18 +214,49 @@ export function SettingsPage() {
           onSubmit={savePayout}
         >
           <h2 className="font-display text-lg font-semibold">Cuenta bancaria / pagos</h2>
-          <p className="text-xs text-zinc-500">Nequi, Bancolombia, Davivienda, etc.</p>
-          <select
-            className={inputClass}
-            value={payoutProvider}
-            onChange={(e) => setPayoutProvider(e.target.value)}
-          >
-            {PAYOUT_PROVIDERS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
+          <p className="text-xs text-zinc-500">Bancos y billeteras de Colombia</p>
+
+          <label className="block text-sm text-zinc-400">
+            Entidad
+            <select
+              className={`${inputClass} mt-1`}
+              value={payoutBankId}
+              onChange={(e) => setPayoutBankId(Number(e.target.value))}
+              required
+            >
+              <optgroup label="Bancos">
+                {colombiaBanks.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Billeteras">
+                {colombiaWallets.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
+
+          <label className="block text-sm text-zinc-400">
+            Tipo de cuenta
+            <select
+              className={`${inputClass} mt-1`}
+              value={payoutAccountType}
+              onChange={(e) => setPayoutAccountType(e.target.value as 'AHORROS' | 'CORRIENTE')}
+              required
+            >
+              {PAYOUT_ACCOUNT_TYPES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <input
             className={inputClass}
             value={payoutHolder}
@@ -222,9 +268,14 @@ export function SettingsPage() {
             className={inputClass}
             value={payoutAccount}
             onChange={(e) => setPayoutAccount(e.target.value)}
-            placeholder="Número de cuenta / celular Nequi"
+            placeholder="Número de cuenta"
             required
           />
+          <p className="text-xs text-zinc-500">
+            Seleccionado:{' '}
+            {COLOMBIA_PAYOUT_OPTIONS.find((b) => b.id === payoutBankId)?.name ?? '—'} ·{' '}
+            {payoutAccountType === 'AHORROS' ? 'Ahorros' : 'Corriente'}
+          </p>
           <button
             type="submit"
             disabled={loading}

@@ -133,7 +133,8 @@ export class ProfilesService {
     const updated = await this.prisma.profile.update({
       where: { userId },
       data: {
-        payoutProvider: dto.payoutProvider,
+        payoutBankId: dto.payoutBankId,
+        payoutAccountType: dto.payoutAccountType,
         payoutAccount: dto.payoutAccount.trim(),
         payoutHolder: dto.payoutHolder.trim(),
       },
@@ -217,7 +218,8 @@ export class ProfilesService {
     age: number;
     attributes: unknown;
     services: unknown;
-    payoutProvider: unknown;
+    payoutBankId: number | null;
+    payoutAccountType: unknown;
     payoutAccount: string | null;
     payoutHolder: string | null;
   }) {
@@ -245,7 +247,8 @@ export class ProfilesService {
       age: p.age,
       attributes: (p.attributes as Record<string, unknown> | null) ?? {},
       services: (p.services as Array<{ name: string; price: number; unit?: string }> | null) ?? [],
-      payoutProvider: p.payoutProvider,
+      payoutBankId: p.payoutBankId,
+      payoutAccountType: p.payoutAccountType,
       payoutAccount: p.payoutAccount,
       payoutHolder: p.payoutHolder,
     };

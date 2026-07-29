@@ -193,7 +193,8 @@ export class AuthService {
             contentPrice: user.profile.contentPrice,
             acceptsEncounters: user.profile.acceptsEncounters,
             attributes: (user.profile.attributes as Record<string, unknown> | null) ?? {},
-            payoutProvider: user.profile.payoutProvider,
+            payoutBankId: user.profile.payoutBankId,
+            payoutAccountType: user.profile.payoutAccountType,
             payoutAccount: user.profile.payoutAccount,
             payoutHolder: user.profile.payoutHolder,
           }

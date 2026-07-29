@@ -16,7 +16,8 @@ export async function updateSettingsRequest(payload: Record<string, unknown>) {
 }
 
 export async function updatePayoutRequest(payload: {
-  payoutProvider: string;
+  payoutBankId: number;
+  payoutAccountType: 'AHORROS' | 'CORRIENTE';
   payoutAccount: string;
   payoutHolder: string;
 }) {

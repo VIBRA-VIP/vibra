@@ -23,7 +23,8 @@ export interface AuthUser {
     contentPrice?: number;
     acceptsEncounters?: boolean;
     attributes?: Record<string, unknown>;
-    payoutProvider?: string | null;
+    payoutBankId?: number | null;
+    payoutAccountType?: string | null;
     payoutAccount?: string | null;
     payoutHolder?: string | null;
   } | null;

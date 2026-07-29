@@ -103,12 +103,53 @@ export const HAIR_STYLES = [
   'sin_barba',
 ] as const;
 
-export const PAYOUT_PROVIDERS = [
-  { id: 'NEQUI', label: 'Nequi' },
-  { id: 'BANCOLOMBIA', label: 'Bancolombia' },
-  { id: 'DAVIVIENDA', label: 'Davivienda' },
-  { id: 'BBVA', label: 'BBVA' },
-  { id: 'OTRO', label: 'Otro banco' },
+export const colombiaBanks = [
+  { id: 1, name: 'Bancolombia' },
+  { id: 2, name: 'Banco de Bogotá' },
+  { id: 3, name: 'Davivienda' },
+  { id: 4, name: 'BBVA Colombia' },
+  { id: 5, name: 'Banco de Occidente' },
+  { id: 6, name: 'Banco Popular' },
+  { id: 7, name: 'Banco AV Villas' },
+  { id: 8, name: 'Banco Caja Social' },
+  { id: 9, name: 'Banco Agrario' },
+  { id: 10, name: 'Banco Itaú' },
+  { id: 11, name: 'Scotiabank Colpatria' },
+  { id: 12, name: 'Banco GNB Sudameris' },
+  { id: 13, name: 'Banco Falabella' },
+  { id: 14, name: 'Banco Pichincha' },
+  { id: 15, name: 'Banco Finandina' },
+  { id: 16, name: 'Banco Serfinanza' },
+  { id: 17, name: 'Banco Cooperativo Coopcentral' },
+  { id: 18, name: 'Bancamía' },
+  { id: 19, name: 'Ban100' },
+  { id: 20, name: 'Banco Contactar' },
+  { id: 21, name: 'Banco Mundo Mujer' },
+  { id: 22, name: 'Banco W' },
+  { id: 23, name: 'Banco BTG Pactual Colombia' },
+  { id: 24, name: 'Lulo Bank' },
+  { id: 25, name: 'Nu Colombia' },
 ] as const;
 
-export type PayoutProviderId = (typeof PAYOUT_PROVIDERS)[number]['id'];
+export const colombiaWallets = [
+  { id: 26, name: 'Nequi' },
+  { id: 27, name: 'Daviplata' },
+  { id: 28, name: 'Dale!' },
+  { id: 29, name: 'Ualá' },
+  { id: 30, name: 'RappiPay' },
+] as const;
+
+export const COLOMBIA_PAYOUT_OPTIONS = [...colombiaBanks, ...colombiaWallets] as const;
+
+export const PAYOUT_ACCOUNT_TYPES = [
+  { id: 'AHORROS', label: 'Ahorros' },
+  { id: 'CORRIENTE', label: 'Corriente' },
+] as const;
+
+export type ColombiaPayoutOptionId = (typeof COLOMBIA_PAYOUT_OPTIONS)[number]['id'];
+export type PayoutAccountTypeId = (typeof PAYOUT_ACCOUNT_TYPES)[number]['id'];
+
+export function getPayoutOptionName(id: number | null | undefined): string | null {
+  if (id == null) return null;
+  return COLOMBIA_PAYOUT_OPTIONS.find((b) => b.id === id)?.name ?? null;
+}

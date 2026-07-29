@@ -2,6 +2,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,7 +12,10 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { PayoutProvider } from '@prisma/client';
+import { PayoutAccountType } from '@prisma/client';
+import { COLOMBIA_PAYOUT_OPTIONS } from '@vibra/shared';
+
+const BANK_IDS = COLOMBIA_PAYOUT_OPTIONS.map((b) => b.id);
 
 export class CompleteProfileDto {
   @IsOptional()
@@ -70,8 +74,12 @@ export class CompleteProfileDto {
 }
 
 export class UpdatePayoutDto {
-  @IsEnum(PayoutProvider)
-  payoutProvider!: PayoutProvider;
+  @IsInt()
+  @IsIn(BANK_IDS)
+  payoutBankId!: number;
+
+  @IsEnum(PayoutAccountType)
+  payoutAccountType!: PayoutAccountType;
 
   @IsString()
   @MinLength(6)
