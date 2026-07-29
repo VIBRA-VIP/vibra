@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, SlidersHorizontal, Video } from 'lucide-react';
+import { Search, SlidersHorizontal, Video, Heart } from 'lucide-react';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { fetchModels, ModelProfileModal, type ModelProfile } from '@/features/profiles';
+import { useAuthStore } from '@/store';
 import { cn } from '@/utils';
 
 const filters = [
   { id: 'all', label: 'Todas' },
   { id: 'popular', label: 'Populares' },
   { id: 'online', label: 'En línea' },
+  { id: 'favorites', label: 'Favoritas' },
   { id: 'new', label: 'Nuevas' },
 ];
 
@@ -19,6 +22,8 @@ const genders = [
 ];
 
 export function ExplorePage() {
+  const user = useAuthStore((s) => s.user);
+  const isModel = user?.role === 'MODEL';
   const [activeFilter, setActiveFilter] = useState('all');
   const [gender, setGender] = useState('');
   const [query, setQuery] = useState('');
@@ -32,9 +37,14 @@ export function ExplorePage() {
         gender: gender || undefined,
         q: query || undefined,
       }),
+    enabled: !isModel,
   });
 
   const models = useMemo(() => data, [data]);
+
+  if (isModel) {
+    return <Navigate to="/requests" replace />;
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
@@ -119,9 +129,13 @@ export function ExplorePage() {
           >
             🔥
           </div>
-          <p className="font-display text-xl font-semibold">Aún no hay modelos</p>
+          <p className="font-display text-xl font-semibold">
+            {activeFilter === 'favorites' ? 'Sin favoritos aún' : 'Aún no hay modelos'}
+          </p>
           <p className="mt-2 max-w-sm text-sm text-zinc-400">
-            Pronto verás perfiles aquí. Mientras tanto, vuelve más tarde o ajusta los filtros.
+            {activeFilter === 'favorites'
+              ? 'Toca el corazón en un perfil para guardarlo aquí.'
+              : 'Pronto verás perfiles aquí. Mientras tanto, vuelve más tarde o ajusta los filtros.'}
           </p>
           <span className="mt-6 text-3xl" aria-hidden>
             ✨💫✨
@@ -156,10 +170,23 @@ export function ExplorePage() {
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              {model.isOnline ? (
-                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2 py-1 text-[11px] font-medium backdrop-blur">
-                  <span className="h-1.5 w-1.5 rounded-full bg-vibra-online" />
-                  En línea
+              <span
+                className={cn(
+                  'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium backdrop-blur',
+                  model.isOnline ? 'bg-black/50 text-white' : 'bg-black/60 text-zinc-300',
+                )}
+              >
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 rounded-full',
+                    model.isOnline ? 'bg-vibra-online' : 'bg-zinc-500',
+                  )}
+                />
+                {model.isOnline ? 'En línea' : 'Offline'}
+              </span>
+              {model.isFavorited ? (
+                <span className="absolute right-3 top-3 rounded-full bg-black/50 p-1.5 text-vibra-pink backdrop-blur">
+                  <Heart className="h-3.5 w-3.5 fill-current" />
                 </span>
               ) : null}
               <span
@@ -186,7 +213,15 @@ export function ExplorePage() {
       )}
 
       {selected ? (
-        <ModelProfileModal model={selected} onClose={() => setSelected(null)} />
+        <ModelProfileModal
+          model={selected}
+          onClose={() => setSelected(null)}
+          onFavoriteChange={(modelUserId, favorited) => {
+            setSelected((prev) =>
+              prev && prev.userId === modelUserId ? { ...prev, isFavorited: favorited } : prev,
+            );
+          }}
+        />
       ) : null}
     </div>
   );

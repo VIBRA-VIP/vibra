@@ -28,11 +28,16 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('vibra_access_token');
   if (token) {
+    config.headers.set?.('Authorization', `Bearer ${token}`);
     config.headers.Authorization = `Bearer ${token}`;
   }
   // Let the browser set multipart boundary for FormData uploads.
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
-    delete config.headers['Content-Type'];
+    if (typeof config.headers.delete === 'function') {
+      config.headers.delete('Content-Type');
+    } else {
+      delete config.headers['Content-Type'];
+    }
   }
   return config;
 });

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AuthUser } from '@/features/auth';
+import { purgeLegacySharedChatStorage } from '@/features/chat/local-chat-storage';
 
 interface AuthState {
   user: AuthUser | null;
@@ -16,6 +17,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: localStorage.getItem('vibra_access_token'),
   hydrated: false,
   setAuth: (user, accessToken, refreshToken) => {
+    purgeLegacySharedChatStorage();
     localStorage.setItem('vibra_access_token', accessToken);
     if (refreshToken) {
       localStorage.setItem('vibra_refresh_token', refreshToken);
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   setUser: (user) => set({ user }),
   clearAuth: () => {
+    purgeLegacySharedChatStorage();
     localStorage.removeItem('vibra_access_token');
     localStorage.removeItem('vibra_refresh_token');
     set({ user: null, accessToken: null });

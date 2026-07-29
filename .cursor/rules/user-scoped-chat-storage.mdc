@@ -1,0 +1,27 @@
+---
+description: Never mix user-private client data (chats, drafts) across accounts
+alwaysApply: true
+---
+
+# User-scoped chat (critical)
+
+## Source of truth
+Chat delivery MUST go through the API (`/api/chat/*`) so both participants see the same messages in the database (`conversations` / `messages`).
+
+Local `localStorage` is only a legacy purge helper — never the delivery path.
+
+## Never do this
+- `localStorage.setItem('vibra_local_chats', ...)` or any **shared** key for conversations/messages
+- Sending a message only on the sender device without `POST /api/chat/conversations/:id/messages`
+- Opening a DM without `POST /api/chat/with/:peerUserId` (creates membership for both users)
+
+## Always do this
+- Open DM: `POST /api/chat/with/:peerUserId`
+- List: `GET /api/chat/conversations`
+- Messages: `GET /api/chat/conversations/:id/messages`
+- Send: `POST /api/chat/conversations/:id/messages` with `{ content }`
+- Reject self-chats (`peer.userId === currentUser.id`)
+- Purge legacy key `vibra_local_chats` on auth/chat load
+
+## Why
+A shared browser chat key made a new model see someone else’s messages, and local-only send meant the model never received client messages. Server membership fixes both.

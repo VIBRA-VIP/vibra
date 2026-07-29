@@ -15,6 +15,7 @@ export interface ModelProfile {
   isOnline: boolean;
   isAvailable: boolean;
   isVerified: boolean;
+  isFavorited?: boolean;
   rating: number;
   ratingCount: number;
   chatPricePerMin: number;

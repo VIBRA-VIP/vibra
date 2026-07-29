@@ -94,6 +94,18 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastSeenAt: new Date() },
+    });
+    if (user.profile) {
+      await this.prisma.profile.update({
+        where: { userId: user.id },
+        data: { isOnline: true },
+      });
+      user.profile.isOnline = true;
+    }
+
     return this.buildAuthResponse(user);
   }
 
@@ -116,6 +128,14 @@ export class AuthService {
         data: { revokedAt: new Date() },
       });
     }
+    await this.prisma.profile.updateMany({
+      where: { userId },
+      data: { isOnline: false },
+    });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastSeenAt: new Date() },
+    });
     return { ok: true };
   }
 

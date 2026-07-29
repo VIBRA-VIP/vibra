@@ -1,21 +1,44 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Compass, MessageCircle, Coins, LogOut, Settings } from 'lucide-react';
+import {
+  Compass,
+  MessageCircle,
+  Coins,
+  LogOut,
+  Settings,
+  Inbox,
+} from 'lucide-react';
 import { AppVersion, Logo } from '@/components';
 import { logoutRequest } from '@/features/auth';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { useAuthStore } from '@/store';
 import { cn } from '@/utils';
 
-const nav = [
-  { to: '/explore', label: 'Explorar', icon: Compass },
-  { to: '/chats', label: 'Chats', icon: MessageCircle, badge: 0 },
-  { to: '/settings', label: 'Ajustes', icon: Settings },
-];
+type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof Compass;
+  badge?: number;
+};
 
 export function AppShell() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const isModel = user?.role === 'MODEL';
+
+  const nav: NavItem[] = isModel
+    ? [
+        { to: '/requests', label: 'Solicitudes', icon: Inbox, badge: 0 },
+        { to: '/chats', label: 'Chats', icon: MessageCircle, badge: 0 },
+        { to: '/settings', label: 'Ajustes', icon: Settings },
+      ]
+    : [
+        { to: '/explore', label: 'Explorar', icon: Compass },
+        { to: '/chats', label: 'Chats', icon: MessageCircle, badge: 0 },
+        { to: '/settings', label: 'Ajustes', icon: Settings },
+      ];
+
+  const homeTo = isModel ? '/requests' : '/explore';
 
   async function handleLogout() {
     try {
@@ -34,12 +57,12 @@ export function AppShell() {
   const balance = user?.walletBalance ?? 0;
 
   return (
-    <div className="flex min-h-screen bg-vibra-bg text-white">
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-vibra-border bg-vibra-elevated md:flex">
-        <div className="border-b border-vibra-border px-5 py-5">
-          <Logo to="/explore" />
+    <div className="flex h-dvh overflow-hidden bg-vibra-bg text-white">
+      <aside className="hidden h-full w-64 shrink-0 flex-col overflow-hidden border-r border-vibra-border bg-vibra-elevated md:flex">
+        <div className="shrink-0 border-b border-vibra-border px-5 py-5">
+          <Logo to={homeTo} />
         </div>
-        <nav className="flex flex-1 flex-col gap-1 p-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
           {nav.map((item) => (
             <NavLink
               key={item.label}
@@ -52,26 +75,39 @@ export function AppShell() {
               }
             >
               <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {item.badge ? (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-vibra-pink px-1.5 text-[11px] font-semibold text-white">
+                  {item.badge}
+                </span>
+              ) : null}
             </NavLink>
           ))}
         </nav>
-        <div className="space-y-3 border-t border-vibra-border p-4">
-          <div className="rounded-xl border border-vibra-border bg-vibra-muted p-3">
-            <p className="text-xs text-zinc-400">Mis créditos</p>
-            <div className="mt-1 flex items-center gap-2">
-              <Coins className="h-4 w-4 text-vibra-gold" />
-              <span className="font-display text-lg font-semibold text-vibra-gold">
-                {balance.toLocaleString('es-ES')}
-              </span>
+        <div className="shrink-0 space-y-3 border-t border-vibra-border p-4">
+          {!isModel ? (
+            <div className="rounded-xl border border-vibra-border bg-vibra-muted p-3">
+              <p className="text-xs text-zinc-400">Mis créditos</p>
+              <div className="mt-1 flex items-center gap-2">
+                <Coins className="h-4 w-4 text-vibra-gold" />
+                <span className="font-display text-lg font-semibold text-vibra-gold">
+                  {balance.toLocaleString('es-ES')}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="mt-3 w-full rounded-lg bg-vibra-pink py-2 text-sm font-semibold transition hover:bg-vibra-pink-hover"
+              >
+                Comprar créditos
+              </button>
             </div>
-            <button
-              type="button"
-              className="mt-3 w-full rounded-lg bg-vibra-pink py-2 text-sm font-semibold transition hover:bg-vibra-pink-hover"
-            >
-              Comprar créditos
-            </button>
-          </div>
+          ) : (
+            <div className="rounded-xl border border-vibra-border bg-vibra-muted p-3">
+              <p className="text-xs text-zinc-400">Cola de videollamadas</p>
+              <p className="mt-1 font-display text-lg font-semibold text-white">En espera</p>
+              <p className="mt-1 text-xs text-zinc-500">Revisa Solicitudes para atender</p>
+            </div>
+          )}
           <div className="flex items-center gap-3 rounded-lg px-1 py-2">
             {avatarUrl ? (
               <img
@@ -86,7 +122,9 @@ export function AppShell() {
             )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-vibra-pink">{user?.role ?? 'CLIENT'}</p>
+              <p className="text-xs text-vibra-pink">
+                {isModel ? 'Modelo' : 'Usuario'}
+              </p>
             </div>
             <button
               type="button"
@@ -101,28 +139,27 @@ export function AppShell() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex-1 overflow-auto pb-20 md:pb-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <main className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />
         </main>
         <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-vibra-border bg-vibra-elevated/95 backdrop-blur md:hidden">
-          {[
-            { to: '/explore', label: 'Explorar', icon: Compass },
-            { to: '/chats', label: 'Chats', icon: MessageCircle },
-            { to: '/settings', label: 'Ajustes', icon: Settings },
-          ].map((item) => (
+          {nav.map((item) => (
             <NavLink
               key={item.label}
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-1 flex-col items-center gap-1 py-3 text-xs text-zinc-500',
+                  'relative flex flex-1 flex-col items-center gap-1 py-3 text-xs text-zinc-500',
                   isActive && 'text-vibra-pink',
                 )
               }
             >
               <item.icon className="h-5 w-5" />
               {item.label}
+              {item.badge ? (
+                <span className="absolute right-1/4 top-2 h-2 w-2 rounded-full bg-vibra-pink" />
+              ) : null}
             </NavLink>
           ))}
         </nav>

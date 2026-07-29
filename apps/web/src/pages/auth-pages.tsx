@@ -33,13 +33,14 @@ export function LoginPage() {
   const location = useLocation();
   const setAuth = useAuthStore((s) => s.setAuth);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   if (accessToken) {
-    return <Navigate to="/explore" replace />;
+    return <Navigate to={user?.role === 'MODEL' ? '/requests' : '/explore'} replace />;
   }
 
   async function onSubmit(e: FormEvent) {
@@ -53,7 +54,8 @@ export function LoginPage() {
         navigate('/onboarding', { replace: true });
         return;
       }
-      const from = (location.state as { from?: string } | null)?.from ?? '/explore';
+      const fallback = res.user.role === 'MODEL' ? '/requests' : '/explore';
+      const from = (location.state as { from?: string } | null)?.from ?? fallback;
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const message =
@@ -108,6 +110,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
   const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
   const [role, setRole] = useState<'CLIENT' | 'MODEL'>('CLIENT');
   const [gender, setGender] = useState<'FEMALE' | 'MALE'>('FEMALE');
   const [displayName, setDisplayName] = useState('');
@@ -118,7 +121,7 @@ export function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   if (accessToken) {
-    return <Navigate to="/explore" replace />;
+    return <Navigate to={user?.role === 'MODEL' ? '/requests' : '/explore'} replace />;
   }
 
   async function onSubmit(e: FormEvent) {

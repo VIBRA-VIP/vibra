@@ -25,6 +25,7 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState(user?.profile?.displayName ?? '');
   const [bio, setBio] = useState(user?.profile?.bio ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.profile?.avatarUrl ?? '');
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [messagePrice, setMessagePrice] = useState(user?.profile?.messagePrice ?? 10);
   const [chatPricePerMin, setChatPricePerMin] = useState(user?.profile?.chatPricePerMin ?? 15);
   const [videoPricePerMin, setVideoPricePerMin] = useState(user?.profile?.videoPricePerMin ?? 80);
@@ -48,6 +49,12 @@ export function SettingsPage() {
         setDisplayName(String(profile.displayName ?? ''));
         setBio(String(profile.bio ?? ''));
         setAvatarUrl(String(profile.avatarUrl ?? ''));
+        const gallery = Array.isArray(profile.gallery)
+          ? (profile.gallery as { url?: string }[])
+              .map((g) => g.url)
+              .filter((u): u is string => Boolean(u))
+          : [];
+        setGalleryUrls(gallery);
         setMessagePrice(Number(profile.messagePrice ?? 10));
         setChatPricePerMin(Number(profile.chatPricePerMin ?? 15));
         setVideoPricePerMin(Number(profile.videoPricePerMin ?? 80));
@@ -73,6 +80,7 @@ export function SettingsPage() {
         displayName,
         bio,
         avatarUrl: avatarUrl || undefined,
+        galleryUrls: isModel ? galleryUrls : undefined,
         messagePrice: isModel ? messagePrice : undefined,
         chatPricePerMin: isModel ? chatPricePerMin : undefined,
         videoPricePerMin: isModel ? videoPricePerMin : undefined,
@@ -147,6 +155,18 @@ export function SettingsPage() {
             label="Elegir foto"
           />
         </div>
+        {isModel ? (
+          <div className="space-y-2">
+            <p className="text-sm text-zinc-400">Galería (hasta 8 fotos)</p>
+            <PhotoUploader
+              photos={galleryUrls}
+              onChange={setGalleryUrls}
+              max={8}
+              type="GALLERY"
+              label="Agregar foto"
+            />
+          </div>
+        ) : null}
         <textarea
           className={inputClass}
           rows={4}

@@ -40,8 +40,8 @@ export class ProfilesService {
     const galleryUrls = dto.galleryUrls ?? [];
 
     if (isModel) {
-      if (galleryUrls.length < 1 || galleryUrls.length > 5) {
-        throw new BadRequestException('Las modelos deben subir entre 1 y 5 fotos');
+      if (galleryUrls.length < 1 || galleryUrls.length > 8) {
+        throw new BadRequestException('Las modelos deben subir entre 1 y 8 fotos');
       }
     } else if (dto.avatarUrl == null && galleryUrls.length === 0 && !user.profile.avatarUrl) {
       throw new BadRequestException('Agrega una foto de perfil');
@@ -106,6 +106,37 @@ export class ProfilesService {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('Perfil no encontrado');
 
+    if (dto.galleryUrls) {
+      if (dto.galleryUrls.length > 8) {
+        throw new BadRequestException('Máximo 8 fotos en la galería');
+      }
+      await this.prisma.media.deleteMany({ where: { userId, type: MediaType.GALLERY } });
+      if (dto.galleryUrls.length) {
+        await this.prisma.media.createMany({
+          data: dto.galleryUrls.map((url, index) => ({
+            userId,
+            type: MediaType.GALLERY,
+            url,
+            key: `gallery/${userId}/${index}`,
+            sortOrder: index,
+          })),
+        });
+      }
+    }
+
+    if (dto.avatarUrl) {
+      await this.prisma.media.deleteMany({ where: { userId, type: MediaType.AVATAR } });
+      await this.prisma.media.create({
+        data: {
+          userId,
+          type: MediaType.AVATAR,
+          url: dto.avatarUrl,
+          key: `avatars/${userId}/main`,
+          sortOrder: 0,
+        },
+      });
+    }
+
     const updated = await this.prisma.profile.update({
       where: { userId },
       data: {
@@ -142,7 +173,10 @@ export class ProfilesService {
     return this.mapProfile(updated);
   }
 
-  async listModels(params: { gender?: string; filter?: string; q?: string }) {
+  async listModels(
+    viewerId: string | undefined,
+    params: { gender?: string; filter?: string; q?: string },
+  ) {
     const where: Record<string, unknown> = {
       user: { role: UserRole.MODEL, isActive: true },
       profileCompleted: true,
@@ -168,6 +202,25 @@ export class ProfilesService {
       ];
     }
 
+    let favoriteModelIds = new Set<string>();
+    if (viewerId && params.filter === 'favorites') {
+      const favs = await this.prisma.favorite.findMany({
+        where: { clientId: viewerId },
+        select: { modelId: true },
+      });
+      favoriteModelIds = new Set(favs.map((f) => f.modelId));
+      if (favoriteModelIds.size === 0) {
+        return [];
+      }
+      where.userId = { in: [...favoriteModelIds] };
+    } else if (viewerId) {
+      const favs = await this.prisma.favorite.findMany({
+        where: { clientId: viewerId },
+        select: { modelId: true },
+      });
+      favoriteModelIds = new Set(favs.map((f) => f.modelId));
+    }
+
     const orderBy =
       params.filter === 'popular'
         ? [{ rating: 'desc' as const }, { ratingCount: 'desc' as const }]
@@ -181,7 +234,119 @@ export class ProfilesService {
       take: 48,
     });
 
-    return profiles.map((p) => this.mapProfile(p));
+    return profiles.map((p) => ({
+      ...this.mapProfile(p),
+      isFavorited: favoriteModelIds.has(p.userId),
+    }));
+  }
+
+  async toggleFavorite(clientId: string, modelUserId: string) {
+    const client = await this.prisma.user.findUnique({ where: { id: clientId } });
+    if (!client || client.role !== UserRole.CLIENT) {
+      throw new BadRequestException('Solo usuarios pueden guardar favoritos');
+    }
+
+    const model = await this.prisma.user.findUnique({
+      where: { id: modelUserId },
+      include: { profile: true },
+    });
+    if (!model || model.role !== UserRole.MODEL || !model.profile) {
+      throw new NotFoundException('Modelo no encontrada');
+    }
+
+    const existing = await this.prisma.favorite.findUnique({
+      where: { clientId_modelId: { clientId, modelId: modelUserId } },
+    });
+
+    if (existing) {
+      await this.prisma.favorite.delete({ where: { id: existing.id } });
+      return { favorited: false, modelId: modelUserId };
+    }
+
+    await this.prisma.favorite.create({
+      data: { clientId, modelId: modelUserId },
+    });
+    return { favorited: true, modelId: modelUserId };
+  }
+
+  async listFavorites(clientId: string) {
+    const client = await this.prisma.user.findUnique({ where: { id: clientId } });
+    if (!client || client.role !== UserRole.CLIENT) {
+      throw new BadRequestException('Solo usuarios pueden ver favoritos');
+    }
+
+    const favs = await this.prisma.favorite.findMany({
+      where: { clientId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        model: { include: { profile: true } },
+      },
+    });
+
+    return favs
+      .filter((f) => f.model.profile)
+      .map((f) => ({
+        ...this.mapProfile(f.model.profile!),
+        isFavorited: true,
+      }));
+  }
+
+  async listClients(
+    requesterId: string,
+    params: { gender?: string; filter?: string; q?: string },
+  ) {
+    const requester = await this.prisma.user.findUnique({ where: { id: requesterId } });
+    if (!requester || requester.role !== UserRole.MODEL) {
+      throw new BadRequestException('Solo modelos pueden ver la lista de usuarios');
+    }
+
+    const where: Record<string, unknown> = {
+      user: { role: UserRole.CLIENT, isActive: true },
+    };
+
+    if (params.gender === 'FEMALE' || params.gender === 'MALE') {
+      where.gender = params.gender as ProfileGender;
+    }
+    if (params.filter === 'online') {
+      where.isOnline = true;
+    }
+    if (params.q?.trim()) {
+      const q = params.q.trim();
+      where.OR = [
+        { displayName: { contains: q, mode: 'insensitive' } },
+        { username: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    const baseClientWhere = { user: { role: UserRole.CLIENT, isActive: true } };
+
+    const [profiles, totalClients, onlineClients] = await Promise.all([
+      this.prisma.profile.findMany({
+        where,
+        orderBy: [{ isOnline: 'desc' as const }, { createdAt: 'desc' as const }],
+        take: 60,
+      }),
+      this.prisma.profile.count({ where: baseClientWhere }),
+      this.prisma.profile.count({
+        where: { ...baseClientWhere, isOnline: true },
+      }),
+    ]);
+
+    return {
+      totalClients,
+      onlineClients,
+      clients: profiles.map((p) => ({
+        id: p.id,
+        userId: p.userId,
+        displayName: p.displayName,
+        username: p.username,
+        avatarUrl: p.avatarUrl,
+        bio: p.bio,
+        gender: p.gender,
+        age: p.age,
+        isOnline: p.isOnline,
+      })),
+    };
   }
 
   async getByUsername(username: string) {

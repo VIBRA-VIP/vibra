@@ -114,7 +114,7 @@ export function OnboardingPage() {
 
   if (!accessToken) return <Navigate to="/login" replace />;
   if (user && !user.needsOnboarding && user.profile?.profileCompleted) {
-    return <Navigate to="/explore" replace />;
+    return <Navigate to={isModel ? '/requests' : '/explore'} replace />;
   }
 
   function toggleTag(tag: string) {
@@ -125,8 +125,8 @@ export function OnboardingPage() {
     e.preventDefault();
     setError(null);
     const urls = photoUrls.map((u) => u.trim()).filter(Boolean);
-    if (isModel && (urls.length < 1 || urls.length > 5)) {
-      setError('Sube entre 1 y 5 fotos de perfil/galería');
+    if (isModel && (urls.length < 1 || urls.length > 8)) {
+      setError('Sube entre 1 y 8 fotos de perfil/galería');
       return;
     }
     if (!isModel && urls.length < 1) {
@@ -171,7 +171,7 @@ export function OnboardingPage() {
       });
       const me = await meRequest();
       setUser(me);
-      navigate('/explore', { replace: true });
+      navigate(isModel ? '/requests' : '/explore', { replace: true });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
@@ -199,12 +199,12 @@ export function OnboardingPage() {
       <form className="mt-8 space-y-8" method="post" onSubmit={onSubmit}>
         <section className="space-y-3">
           <h2 className="font-display text-lg font-semibold">
-            {isModel ? 'Fotos (1 a 5)' : 'Foto de perfil'}
+            {isModel ? 'Fotos (1 a 8)' : 'Foto de perfil'}
           </h2>
           <PhotoUploader
             photos={photoUrls}
             onChange={setPhotoUrls}
-            max={isModel ? 5 : 1}
+            max={isModel ? 8 : 1}
             type="GALLERY"
             label={isModel ? 'Agregar foto' : 'Elegir foto'}
           />

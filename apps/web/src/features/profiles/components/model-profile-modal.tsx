@@ -1,7 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Video, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatAttrValue } from '@vibra/shared';
 import { mediaSrc } from '@/features/media/services/media-api';
+import { toggleFavoriteRequest } from '../services/profiles-api';
 import type { ModelProfile } from '../types/model-profile';
+import { cn } from '@/utils';
 
 const femaleAttrOrder = [
   'breastSize',
@@ -49,9 +54,18 @@ const attrLabels: Record<string, string> = {
 interface Props {
   model: ModelProfile;
   onClose: () => void;
+  onFavoriteChange?: (modelUserId: string, favorited: boolean) => void;
 }
 
-export function ModelProfileModal({ model, onClose }: Props) {
+export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [favorited, setFavorited] = useState(Boolean(model.isFavorited));
+
+  useEffect(() => {
+    setFavorited(Boolean(model.isFavorited));
+  }, [model.isFavorited, model.userId]);
+
   const order = model.gender === 'MALE' ? maleAttrOrder : femaleAttrOrder;
   const attrs = order
     .filter((key) => model.attributes[key] != null && model.attributes[key] !== '')
@@ -60,6 +74,29 @@ export function ModelProfileModal({ model, onClose }: Props) {
       label: attrLabels[key] ?? key,
       value: formatAttrValue(key, String(model.attributes[key])),
     }));
+
+  const favoriteMutation = useMutation({
+    mutationFn: () => toggleFavoriteRequest(model.userId),
+    onSuccess: (data) => {
+      setFavorited(data.favorited);
+      onFavoriteChange?.(model.userId, data.favorited);
+      void queryClient.invalidateQueries({ queryKey: ['models'] });
+    },
+  });
+
+  function startChat() {
+    onClose();
+    navigate('/chats', {
+      state: {
+        peer: {
+          userId: model.userId,
+          displayName: model.displayName,
+          username: model.username,
+          avatarUrl: model.avatarUrl,
+        },
+      },
+    });
+  }
 
   return (
     <div
@@ -100,12 +137,20 @@ export function ModelProfileModal({ model, onClose }: Props) {
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-vibra-elevated via-transparent to-transparent" />
-          {model.isOnline ? (
-            <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2 py-1 text-[11px] font-medium backdrop-blur">
-              <span className="h-1.5 w-1.5 rounded-full bg-vibra-online" />
-              En línea
-            </span>
-          ) : null}
+          <span
+            className={cn(
+              'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium backdrop-blur',
+              model.isOnline ? 'bg-black/50 text-white' : 'bg-black/50 text-zinc-300',
+            )}
+          >
+            <span
+              className={cn(
+                'h-1.5 w-1.5 rounded-full',
+                model.isOnline ? 'bg-vibra-online' : 'bg-zinc-500',
+              )}
+            />
+            {model.isOnline ? 'En línea' : 'No disponible'}
+          </span>
         </div>
 
         <div className="space-y-5 overflow-y-auto px-5 pb-6 pt-2">
@@ -117,6 +162,16 @@ export function ModelProfileModal({ model, onClose }: Props) {
             <p className="mt-1 text-sm text-zinc-400">
               {model.age} · ★ {model.rating.toFixed(1)} ({model.ratingCount}) · @
               {model.username}
+            </p>
+            <p
+              className={cn(
+                'mt-1 text-xs font-medium',
+                model.isOnline ? 'text-vibra-online' : 'text-zinc-500',
+              )}
+            >
+              {model.isOnline
+                ? 'Disponible ahora para chat y videollamada'
+                : 'No está en línea en este momento'}
             </p>
           </div>
 
@@ -181,7 +236,8 @@ export function ModelProfileModal({ model, onClose }: Props) {
           <div className="flex gap-2 pt-1">
             <button
               type="button"
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold"
+              onClick={startChat}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
             >
               <MessageCircle className="h-4 w-4" />
               Chat
@@ -195,10 +251,18 @@ export function ModelProfileModal({ model, onClose }: Props) {
             </button>
             <button
               type="button"
-              className="rounded-xl border border-vibra-border p-3 text-zinc-300"
-              aria-label="Seguir"
+              disabled={favoriteMutation.isPending}
+              onClick={() => favoriteMutation.mutate()}
+              className={cn(
+                'rounded-xl border p-3 transition disabled:opacity-60',
+                favorited
+                  ? 'border-vibra-pink bg-vibra-pink/20 text-vibra-pink'
+                  : 'border-vibra-border text-zinc-300 hover:border-vibra-pink/50 hover:text-vibra-pink',
+              )}
+              aria-label={favorited ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+              title={favorited ? 'Quitar de favoritos' : 'Guardar favorito'}
             >
-              <Heart className="h-5 w-5" />
+              <Heart className={cn('h-5 w-5', favorited && 'fill-current')} />
             </button>
           </div>
         </div>

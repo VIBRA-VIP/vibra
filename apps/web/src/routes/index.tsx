@@ -9,6 +9,7 @@ import {
   OnboardingPage,
   ProfilePage,
   RegisterPage,
+  RequestsPage,
   SettingsPage,
 } from '@/pages';
 import { ProtectedRoute } from './protected-route';
@@ -27,6 +28,7 @@ export function AppRoutes() {
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route element={<AppShell />}>
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/requests" element={<RequestsPage />} />
           <Route path="/chats" element={<ChatsPage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />

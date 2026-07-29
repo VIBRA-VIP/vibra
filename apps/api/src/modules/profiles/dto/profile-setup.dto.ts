@@ -1,4 +1,5 @@
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -43,6 +44,7 @@ export class CompleteProfileDto {
   @IsArray()
   @IsString({ each: true })
   @Matches(MEDIA_URL, { each: true })
+  @ArrayMaxSize(8)
   galleryUrls?: string[];
 
   @IsOptional()
@@ -112,6 +114,13 @@ export class UpdateSettingsDto {
   @IsString()
   @Matches(MEDIA_URL)
   avatarUrl?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Matches(MEDIA_URL, { each: true })
+  @ArrayMaxSize(8)
+  galleryUrls?: string[];
 
   @IsOptional()
   @IsArray()

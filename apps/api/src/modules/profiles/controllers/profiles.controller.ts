@@ -44,11 +44,38 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard)
   @Get('models')
   listModels(
+    @CurrentUser() user: { id: string },
     @Query('gender') gender?: string,
     @Query('filter') filter?: string,
     @Query('q') q?: string,
   ) {
-    return this.profilesService.listModels({ gender, filter, q });
+    return this.profilesService.listModels(user.id, { gender, filter, q });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('favorites')
+  listFavorites(@CurrentUser() user: { id: string }) {
+    return this.profilesService.listFavorites(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('favorites/:modelUserId')
+  toggleFavorite(
+    @CurrentUser() user: { id: string },
+    @Param('modelUserId') modelUserId: string,
+  ) {
+    return this.profilesService.toggleFavorite(user.id, modelUserId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('clients')
+  listClients(
+    @CurrentUser() user: { id: string },
+    @Query('gender') gender?: string,
+    @Query('filter') filter?: string,
+    @Query('q') q?: string,
+  ) {
+    return this.profilesService.listClients(user.id, { gender, filter, q });
   }
 
   @UseGuards(JwtAuthGuard)
