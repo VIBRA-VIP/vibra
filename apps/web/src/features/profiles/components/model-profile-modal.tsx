@@ -1,40 +1,48 @@
 import { Heart, MessageCircle, Video, X } from 'lucide-react';
+import { formatAttrValue } from '@vibra/shared';
+import { mediaSrc } from '@/features/media/services/media-api';
 import type { ModelProfile } from '../types/model-profile';
 
 const femaleAttrOrder = [
+  'breastSize',
+  'buttType',
+  'skinTone',
+  'hair',
   'height',
   'bodyType',
-  'skinTone',
   'bust',
   'waist',
   'hips',
   'tattoos',
-  'hair',
   'vibe',
 ];
 
 const maleAttrOrder = [
+  'bodyBuild',
+  'penisSize',
+  'skinTone',
+  'hair',
   'height',
   'bodyType',
-  'skinTone',
-  'penisSize',
   'penisGirth',
   'tattoos',
-  'hair',
   'vibe',
 ];
 
 const attrLabels: Record<string, string> = {
   height: 'Altura',
   bodyType: 'Complexión',
+  bodyBuild: 'Complexión',
   skinTone: 'Tono de piel',
+  breastSize: 'Senos',
+  buttType: 'Glúteos',
   bust: 'Busto',
   waist: 'Cintura',
   hips: 'Cadera',
   tattoos: 'Tatuajes',
   hair: 'Cabello',
   vibe: 'Estilo',
-  penisSize: 'Tamaño',
+  penisSize: 'Miembro',
   penisGirth: 'Grosor',
 };
 
@@ -50,7 +58,7 @@ export function ModelProfileModal({ model, onClose }: Props) {
     .map((key) => ({
       key,
       label: attrLabels[key] ?? key,
-      value: String(model.attributes[key]),
+      value: formatAttrValue(key, String(model.attributes[key])),
     }));
 
   return (
@@ -78,7 +86,7 @@ export function ModelProfileModal({ model, onClose }: Props) {
         <div className="relative aspect-[4/5] max-h-[42vh] shrink-0 overflow-hidden bg-zinc-800">
           {model.avatarUrl ? (
             <img
-              src={model.avatarUrl}
+              src={mediaSrc(model.avatarUrl)}
               alt={model.displayName}
               className="h-full w-full object-cover"
             />

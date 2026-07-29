@@ -9,6 +9,8 @@ import { MediaType } from '@prisma/client';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { PrismaService } from '../../../database/prisma.service';
 import type { Env } from '../../../config/env.schema';
 import { assertUploadableMediaType } from '../dto/create-upload-url.dto';
@@ -22,6 +24,15 @@ const FOLDER: Record<string, string> = {
   CHAT_IMAGE: 'chat',
   VIDEO: 'video',
 };
+
+const ALLOWED_MIME = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
+
+const MAX_BYTES = 8 * 1024 * 1024;
 
 @Injectable()
 export class MediaService {
@@ -57,6 +68,74 @@ export class MediaService {
       status: 'ok',
       s3Configured: Boolean(this.s3 && this.bucket),
     };
+  }
+
+  async uploadFile(
+    userId: string,
+    file: Express.Multer.File,
+    type: MediaType = MediaType.GALLERY,
+  ) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('No se recibió ningún archivo');
+    }
+    if (!ALLOWED_MIME.has(file.mimetype)) {
+      throw new BadRequestException('Solo se permiten JPG, PNG, WEBP o GIF');
+    }
+    if (file.size > MAX_BYTES) {
+      throw new BadRequestException('La imagen no puede superar 8 MB');
+    }
+
+    try {
+      assertUploadableMediaType(type);
+    } catch {
+      throw new BadRequestException(`Unsupported media type: ${type}`);
+    }
+
+    const folder = FOLDER[type] ?? 'other';
+    const ext = extensionForMime(file.mimetype) || '.jpg';
+    const key = `media/${folder}/${userId}/${Date.now()}-${randomUUID()}${ext}`;
+
+    let publicUrl: string;
+
+    if (this.s3 && this.bucket && this.publicBase) {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          ACL: 'public-read',
+        }),
+      );
+      publicUrl = `${this.publicBase.replace(/\/$/, '')}/${key}`;
+    } else {
+      const relativePath = key.replace(/^media\//, '');
+      const diskPath = join(process.cwd(), 'uploads', relativePath);
+      await mkdir(dirname(diskPath), { recursive: true });
+      await writeFile(diskPath, file.buffer);
+      publicUrl = `/uploads/${relativePath}`;
+    }
+
+    const media = await this.prisma.media.create({
+      data: {
+        userId,
+        type,
+        url: publicUrl,
+        key,
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+        sortOrder: 0,
+      },
+    });
+
+    if (type === MediaType.AVATAR || type === MediaType.BANNER) {
+      await this.prisma.profile.updateMany({
+        where: { userId },
+        data: type === MediaType.AVATAR ? { avatarUrl: publicUrl } : { bannerUrl: publicUrl },
+      });
+    }
+
+    return { url: publicUrl, key, mediaId: media.id, type };
   }
 
   async createUploadUrl(userId: string, dto: CreateUploadUrlDto) {

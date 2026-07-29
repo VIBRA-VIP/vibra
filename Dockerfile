@@ -36,6 +36,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api ./apps/api
 COPY --from=build /app/packages ./packages
 
+RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
+
 EXPOSE 3000
 
 CMD ["sh", "-c", "pnpm --filter @vibra/api exec prisma migrate deploy && node apps/api/dist/main.js"]

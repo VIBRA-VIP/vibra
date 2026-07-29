@@ -6,7 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -16,6 +16,9 @@ import { PayoutAccountType } from '@prisma/client';
 import { COLOMBIA_PAYOUT_OPTIONS } from '@vibra/shared';
 
 const BANK_IDS = COLOMBIA_PAYOUT_OPTIONS.map((b) => b.id);
+
+/** Absolute URL or local/proxied upload path */
+const MEDIA_URL = /^(https?:\/\/.+|\/uploads\/.+)$/;
 
 export class CompleteProfileDto {
   @IsOptional()
@@ -32,12 +35,14 @@ export class CompleteProfileDto {
   attributes?: Record<string, unknown>;
 
   @IsOptional()
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @Matches(MEDIA_URL)
   avatarUrl?: string;
 
   @IsOptional()
   @IsArray()
-  @IsUrl({ require_tld: false }, { each: true })
+  @IsString({ each: true })
+  @Matches(MEDIA_URL, { each: true })
   galleryUrls?: string[];
 
   @IsOptional()
@@ -104,7 +109,8 @@ export class UpdateSettingsDto {
   bio?: string;
 
   @IsOptional()
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @Matches(MEDIA_URL)
   avatarUrl?: string;
 
   @IsOptional()

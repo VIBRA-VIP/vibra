@@ -70,7 +70,7 @@ export function inventUsername(seed?: string): string {
   return `${prefix}${suffix}${num}`.toLowerCase();
 }
 
-export const BODY_TAGS = [
+export const FEMALE_BODY_TAGS = [
   'curvy',
   'morena',
   'blanquita',
@@ -82,26 +82,117 @@ export const BODY_TAGS = [
   'pelirroja',
   'alta',
   'petite',
+] as const;
+
+export const MALE_BODY_TAGS = [
   'musculoso',
-  'barba',
   'atletico',
+  'fitness',
+  'delgado',
+  'tatuajes',
+  'barba',
+  'latino',
+  'moreno',
+  'rubio',
+  'pelirrojo',
+  'alto',
+  'velludo',
 ] as const;
 
-export const FEMALE_BREAST_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'] as const;
-export const FEMALE_BUTT_TYPES = ['normal', 'nalgona', 'caderona', 'firmes'] as const;
+/** @deprecated Prefer FEMALE_BODY_TAGS / MALE_BODY_TAGS */
+export const BODY_TAGS = [...FEMALE_BODY_TAGS, ...MALE_BODY_TAGS] as const;
 
-export const MALE_BODY_BUILDS = ['delgado', 'atletico', 'musculoso', 'normal'] as const;
-export const MALE_PENIS_SIZES = ['promedio', 'grande', 'extra_grande'] as const;
-export const SKIN_TONES = ['clara', 'media', 'morena', 'oscura'] as const;
+export type AttrOption = {
+  id: string;
+  label: string;
+  emoji: string;
+};
+
+export const FEMALE_BREAST_OPTIONS: readonly AttrOption[] = [
+  { id: 'pequenos', label: 'Pequeños', emoji: '🌱' },
+  { id: 'medianos', label: 'Medianos', emoji: '🍈' },
+  { id: 'grandes', label: 'Grandes', emoji: '🍈🍈' },
+  { id: 'tetona', label: 'Tetona', emoji: '🍈🍈🍈' },
+] as const;
+
+export const FEMALE_BUTT_OPTIONS: readonly AttrOption[] = [
+  { id: 'plana', label: 'Plana', emoji: '✨' },
+  { id: 'normal', label: 'Normal', emoji: '🍑' },
+  { id: 'nalgona', label: 'Nalgona', emoji: '🍑🍑' },
+  { id: 'muy_nalgona', label: 'Muy nalgona', emoji: '🍑🍑🍑' },
+] as const;
+
+export const MALE_BODY_OPTIONS: readonly AttrOption[] = [
+  { id: 'flaco', label: 'Flaco', emoji: '🦴' },
+  { id: 'delgado', label: 'Delgado', emoji: '🧍' },
+  { id: 'normal', label: 'Normal', emoji: '🙂' },
+  { id: 'atletico', label: 'Atlético', emoji: '🏃' },
+  { id: 'musculoso', label: 'Musculoso', emoji: '💪' },
+] as const;
+
+export const MALE_PENIS_OPTIONS: readonly AttrOption[] = [
+  { id: 'pequeno', label: 'Pequeño', emoji: '🔸' },
+  { id: 'mediano', label: 'Mediano', emoji: '🔶' },
+  { id: 'grande', label: 'Grande', emoji: '🔥' },
+  { id: 'extra_grande', label: 'Extra grande', emoji: '💥' },
+] as const;
+
+export const SKIN_TONE_OPTIONS: readonly AttrOption[] = [
+  { id: 'clara', label: 'Clara', emoji: '🏻' },
+  { id: 'media', label: 'Media', emoji: '🏼' },
+  { id: 'morena', label: 'Morena', emoji: '🏽' },
+  { id: 'oscura', label: 'Oscura', emoji: '🏿' },
+] as const;
+
+export const FEMALE_HAIR_OPTIONS: readonly AttrOption[] = [
+  { id: 'corto', label: 'Corto', emoji: '✂️' },
+  { id: 'medio', label: 'Medio', emoji: '💇' },
+  { id: 'largo', label: 'Largo', emoji: '👩‍🦱' },
+  { id: 'liso', label: 'Liso', emoji: '✨' },
+  { id: 'rizado', label: 'Rizado', emoji: '🌀' },
+  { id: 'ondulado', label: 'Ondulado', emoji: '🌊' },
+] as const;
+
+export const MALE_HAIR_OPTIONS: readonly AttrOption[] = [
+  { id: 'rapado', label: 'Rapado', emoji: '🪒' },
+  { id: 'corto', label: 'Corto', emoji: '✂️' },
+  { id: 'medio', label: 'Medio', emoji: '💇‍♂️' },
+  { id: 'largo', label: 'Largo', emoji: '🧑‍🦱' },
+  { id: 'liso', label: 'Liso', emoji: '✨' },
+  { id: 'rizado', label: 'Rizado', emoji: '🌀' },
+  { id: 'con_barba', label: 'Con barba', emoji: '🧔' },
+  { id: 'sin_barba', label: 'Sin barba', emoji: '😊' },
+] as const;
+
+/** @deprecated use FEMALE_BREAST_OPTIONS */
+export const FEMALE_BREAST_SIZES = FEMALE_BREAST_OPTIONS.map((o) => o.id);
+/** @deprecated use FEMALE_BUTT_OPTIONS */
+export const FEMALE_BUTT_TYPES = FEMALE_BUTT_OPTIONS.map((o) => o.id);
+/** @deprecated use MALE_BODY_OPTIONS */
+export const MALE_BODY_BUILDS = MALE_BODY_OPTIONS.map((o) => o.id);
+/** @deprecated use MALE_PENIS_OPTIONS */
+export const MALE_PENIS_SIZES = MALE_PENIS_OPTIONS.map((o) => o.id);
+/** @deprecated use SKIN_TONE_OPTIONS */
+export const SKIN_TONES = SKIN_TONE_OPTIONS.map((o) => o.id);
+/** @deprecated use FEMALE_HAIR_OPTIONS / MALE_HAIR_OPTIONS */
 export const HAIR_STYLES = [
-  'corto',
-  'largo',
-  'rizado',
-  'liso',
-  'rapado',
-  'con_barba',
-  'sin_barba',
-] as const;
+  ...new Set([...FEMALE_HAIR_OPTIONS, ...MALE_HAIR_OPTIONS].map((o) => o.id)),
+] as string[];
+
+const ATTR_LOOKUPS: Record<string, readonly AttrOption[]> = {
+  breastSize: FEMALE_BREAST_OPTIONS,
+  buttType: FEMALE_BUTT_OPTIONS,
+  bodyBuild: MALE_BODY_OPTIONS,
+  penisSize: MALE_PENIS_OPTIONS,
+  skinTone: SKIN_TONE_OPTIONS,
+  hair: [...FEMALE_HAIR_OPTIONS, ...MALE_HAIR_OPTIONS],
+};
+
+export function formatAttrValue(key: string, raw: string): string {
+  if (/^\d+(\.\d+)?\s*cm$/i.test(raw.trim())) return raw.trim();
+  const opt = ATTR_LOOKUPS[key]?.find((o) => o.id === raw);
+  return opt ? `${opt.emoji} ${opt.label}` : raw;
+}
 
 export const colombiaBanks = [
   { id: 1, name: 'Bancolombia' },

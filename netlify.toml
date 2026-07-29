@@ -16,6 +16,13 @@
   status = 200
   force = true
 
+# Local/disk uploads served by the API
+[[redirects]]
+  from = "/uploads/*"
+  to = "http://3.17.154.80:3000/uploads/:splat"
+  status = 200
+  force = true
+
 # SPA (React Router)
 [[redirects]]
   from = "/*"

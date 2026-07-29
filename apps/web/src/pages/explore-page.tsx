@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, SlidersHorizontal, Video } from 'lucide-react';
+import { mediaSrc } from '@/features/media/services/media-api';
 import { fetchModels, ModelProfileModal, type ModelProfile } from '@/features/profiles';
 import { cn } from '@/utils';
 
@@ -38,7 +39,7 @@ export function ExplorePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="font-display text-2xl font-bold md:text-3xl">Explorar personas</h1>
+        <h1 className="font-display text-2xl font-bold md:text-3xl">Explorar</h1>
         <div className="flex flex-1 items-center gap-2 sm:max-w-md sm:justify-end">
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -46,7 +47,7 @@ export function ExplorePage() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar personas..."
+              placeholder="Buscar..."
               className="w-full rounded-xl border border-vibra-border bg-vibra-elevated py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-zinc-500 focus:border-vibra-pink/50"
             />
           </div>
@@ -110,50 +111,79 @@ export function ExplorePage() {
         <p className="text-sm text-red-400">No se pudieron cargar los perfiles.</p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {models.map((model) => (
-          <button
-            key={model.id}
-            type="button"
-            onClick={() => setSelected(model)}
-            className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-vibra-border bg-vibra-muted text-left transition hover:border-vibra-pink"
+      {!isLoading && !isError && models.length === 0 ? (
+        <div className="flex min-h-[50vh] flex-col items-center justify-center rounded-3xl border border-dashed border-vibra-border bg-vibra-elevated/60 px-6 py-16 text-center">
+          <div
+            className="mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-vibra-pink/30 via-zinc-800 to-zinc-950 text-6xl shadow-inner"
+            aria-hidden
           >
-            <div
-              className={cn(
-                'absolute inset-0 bg-gradient-to-br',
-                model.gender === 'MALE'
-                  ? 'from-sky-800 via-zinc-800 to-zinc-950'
-                  : 'from-rose-800 via-zinc-800 to-zinc-950',
-              )}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-            {model.isOnline ? (
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2 py-1 text-[11px] font-medium backdrop-blur">
-                <span className="h-1.5 w-1.5 rounded-full bg-vibra-online" />
-                En línea
-              </span>
-            ) : null}
-            <span
-              className="absolute bottom-16 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-vibra-pink text-white shadow-lg"
-              aria-hidden
+            🔥
+          </div>
+          <p className="font-display text-xl font-semibold">Aún no hay modelos</p>
+          <p className="mt-2 max-w-sm text-sm text-zinc-400">
+            Pronto verás perfiles aquí. Mientras tanto, vuelve más tarde o ajusta los filtros.
+          </p>
+          <span className="mt-6 text-3xl" aria-hidden>
+            ✨💫✨
+          </span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {models.map((model) => (
+            <button
+              key={model.id}
+              type="button"
+              onClick={() => setSelected(model)}
+              className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-vibra-border bg-vibra-muted text-left transition hover:border-vibra-pink"
             >
-              <Video className="h-4 w-4" />
-            </span>
-            <div className="absolute inset-x-0 bottom-0 p-3">
-              <p className="font-display text-base font-semibold">
-                {model.displayName}{' '}
-                {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
-              </p>
-              <p className="text-xs text-zinc-300">
-                {model.age} · ★ {model.rating.toFixed(1)}
-              </p>
-              <p className="mt-1 text-[11px] text-zinc-400">
-                Chat {model.chatPricePerMin} · Video {model.videoPricePerMin} créd/min
-              </p>
-            </div>
-          </button>
-        ))}
-      </div>
+              <div
+                className={cn(
+                  'absolute inset-0 bg-gradient-to-br',
+                  model.gender === 'MALE'
+                    ? 'from-sky-800 via-zinc-800 to-zinc-950'
+                    : 'from-rose-800 via-zinc-800 to-zinc-950',
+                )}
+              />
+              {model.avatarUrl ? (
+                <img
+                  src={mediaSrc(model.avatarUrl)}
+                  alt={model.displayName}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-80">
+                  {model.gender === 'MALE' ? '😎' : '💃'}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              {model.isOnline ? (
+                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-2 py-1 text-[11px] font-medium backdrop-blur">
+                  <span className="h-1.5 w-1.5 rounded-full bg-vibra-online" />
+                  En línea
+                </span>
+              ) : null}
+              <span
+                className="absolute bottom-16 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-vibra-pink text-white shadow-lg"
+                aria-hidden
+              >
+                <Video className="h-4 w-4" />
+              </span>
+              <div className="absolute inset-x-0 bottom-0 p-3">
+                <p className="font-display text-base font-semibold">
+                  {model.displayName}{' '}
+                  {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
+                </p>
+                <p className="text-xs text-zinc-300">
+                  {model.age} · ★ {model.rating.toFixed(1)}
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-400">
+                  Chat {model.chatPricePerMin} · Video {model.videoPricePerMin} créd/min
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {selected ? (
         <ModelProfileModal model={selected} onClose={() => setSelected(null)} />

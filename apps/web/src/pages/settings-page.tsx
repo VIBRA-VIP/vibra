@@ -6,6 +6,7 @@ import {
   colombiaWallets,
 } from '@vibra/shared';
 import { meRequest } from '@/features/auth';
+import { PhotoUploader } from '@/features/media/components/photo-uploader';
 import {
   getMyProfile,
   updatePayoutRequest,
@@ -136,12 +137,16 @@ export function SettingsPage() {
           onChange={(e) => setDisplayName(e.target.value)}
           placeholder="Nombre visible"
         />
-        <input
-          className={inputClass}
-          value={avatarUrl}
-          onChange={(e) => setAvatarUrl(e.target.value)}
-          placeholder="URL foto de perfil"
-        />
+        <div className="space-y-2">
+          <p className="text-sm text-zinc-400">Foto de perfil</p>
+          <PhotoUploader
+            photos={avatarUrl ? [avatarUrl] : []}
+            onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
+            max={1}
+            type="AVATAR"
+            label="Elegir foto"
+          />
+        </div>
         <textarea
           className={inputClass}
           rows={4}

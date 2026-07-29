@@ -24,5 +24,6 @@ apps/api/prisma/*.db-journal
 tmp
 temp
 .docker
+apps/api/uploads
 install.log
 install-bun*.log

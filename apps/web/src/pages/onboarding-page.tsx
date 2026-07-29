@@ -1,15 +1,19 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
-  BODY_TAGS,
-  FEMALE_BREAST_SIZES,
-  FEMALE_BUTT_TYPES,
-  HAIR_STYLES,
-  MALE_BODY_BUILDS,
-  MALE_PENIS_SIZES,
-  SKIN_TONES,
+  FEMALE_BODY_TAGS,
+  FEMALE_BREAST_OPTIONS,
+  FEMALE_BUTT_OPTIONS,
+  FEMALE_HAIR_OPTIONS,
+  MALE_BODY_OPTIONS,
+  MALE_BODY_TAGS,
+  MALE_HAIR_OPTIONS,
+  MALE_PENIS_OPTIONS,
+  SKIN_TONE_OPTIONS,
+  type AttrOption,
 } from '@vibra/shared';
 import { meRequest } from '@/features/auth';
+import { PhotoUploader } from '@/features/media/components/photo-uploader';
 import { completeProfileRequest } from '@/features/profiles/services/profile-setup-api';
 import { useAuthStore } from '@/store';
 
@@ -40,6 +44,39 @@ function Chip({
   );
 }
 
+function EmojiPicker({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly AttrOption[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {options.map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition ${
+              active
+                ? 'border-vibra-pink bg-vibra-pink/20 text-white'
+                : 'border-vibra-border text-zinc-400 hover:border-vibra-pink/40 hover:text-white'
+            }`}
+          >
+            <span className="text-2xl leading-none">{opt.emoji}</span>
+            <span className="text-xs font-medium">{opt.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function OnboardingPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -51,11 +88,13 @@ export function OnboardingPage() {
 
   const [bio, setBio] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<string[]>(['']);
-  const [breastSize, setBreastSize] = useState('M');
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [breastSize, setBreastSize] = useState('medianos');
   const [buttType, setButtType] = useState('normal');
   const [bodyBuild, setBodyBuild] = useState('atletico');
-  const [penisSize, setPenisSize] = useState('promedio');
+  const [penisSize, setPenisSize] = useState('mediano');
+  const [penisCm, setPenisCm] = useState('');
+  const [usePenisCm, setUsePenisCm] = useState(false);
   const [skinTone, setSkinTone] = useState('media');
   const [hair, setHair] = useState('liso');
   const [messagePrice, setMessagePrice] = useState(10);
@@ -68,7 +107,10 @@ export function OnboardingPage() {
 
   const username = user?.profile?.username;
 
-  const availableTags = useMemo(() => [...BODY_TAGS], []);
+  const availableTags = useMemo(
+    () => [...(isFemale ? FEMALE_BODY_TAGS : MALE_BODY_TAGS)],
+    [isFemale],
+  );
 
   if (!accessToken) return <Navigate to="/login" replace />;
   if (user && !user.needsOnboarding && user.profile?.profileCompleted) {
@@ -79,16 +121,12 @@ export function OnboardingPage() {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
-  function updatePhoto(index: number, value: string) {
-    setPhotoUrls((prev) => prev.map((p, i) => (i === index ? value : p)));
-  }
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     const urls = photoUrls.map((u) => u.trim()).filter(Boolean);
     if (isModel && (urls.length < 1 || urls.length > 5)) {
-      setError('Sube entre 1 y 5 URLs de fotos de perfil/galería');
+      setError('Sube entre 1 y 5 fotos de perfil/galería');
       return;
     }
     if (!isModel && urls.length < 1) {
@@ -98,10 +136,24 @@ export function OnboardingPage() {
 
     setLoading(true);
     try {
+      if (!isFemale && usePenisCm) {
+        const cm = Number(penisCm);
+        if (!Number.isFinite(cm) || cm < 5 || cm > 40) {
+          setError('Indica el tamaño del miembro entre 5 y 40 cm');
+          setLoading(false);
+          return;
+        }
+      }
+
       const attributes = isModel
         ? isFemale
           ? { breastSize, buttType, skinTone, hair }
-          : { bodyBuild, penisSize, skinTone, hair }
+          : {
+              bodyBuild,
+              penisSize: usePenisCm ? `${Number(penisCm)} cm` : penisSize,
+              skinTone,
+              hair,
+            }
         : {};
 
       await completeProfileRequest({
@@ -149,27 +201,13 @@ export function OnboardingPage() {
           <h2 className="font-display text-lg font-semibold">
             {isModel ? 'Fotos (1 a 5)' : 'Foto de perfil'}
           </h2>
-          <p className="text-xs text-zinc-500">
-            Por ahora pega URLs de imagen (S3/upload se conecta después).
-          </p>
-          {photoUrls.map((url, index) => (
-            <input
-              key={index}
-              value={url}
-              onChange={(e) => updatePhoto(index, e.target.value)}
-              placeholder={`URL foto ${index + 1}`}
-              className={inputClass}
-            />
-          ))}
-          {isModel && photoUrls.length < 5 ? (
-            <button
-              type="button"
-              onClick={() => setPhotoUrls((prev) => [...prev, ''])}
-              className="text-sm text-vibra-pink"
-            >
-              + Agregar otra foto
-            </button>
-          ) : null}
+          <PhotoUploader
+            photos={photoUrls}
+            onChange={setPhotoUrls}
+            max={isModel ? 5 : 1}
+            type="GALLERY"
+            label={isModel ? 'Agregar foto' : 'Elegir foto'}
+          />
         </section>
 
         <section className="space-y-3">
@@ -199,100 +237,98 @@ export function OnboardingPage() {
               </div>
             </section>
 
-            <section className="space-y-3">
+            <section className="space-y-5">
               <h2 className="font-display text-lg font-semibold">Medidas / atributos</h2>
               {isFemale ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="text-sm text-zinc-400">
-                    Senos
-                    <select
-                      className={`${inputClass} mt-1`}
+                <>
+                  <div className="space-y-2">
+                    <p className="text-sm text-zinc-400">Tamaño de senos</p>
+                    <EmojiPicker
+                      options={FEMALE_BREAST_OPTIONS}
                       value={breastSize}
-                      onChange={(e) => setBreastSize(e.target.value)}
-                    >
-                      {FEMALE_BREAST_SIZES.map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-sm text-zinc-400">
-                    Glúteos
-                    <select
-                      className={`${inputClass} mt-1`}
+                      onChange={setBreastSize}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-zinc-400">Cadera / glúteos</p>
+                    <EmojiPicker
+                      options={FEMALE_BUTT_OPTIONS}
                       value={buttType}
-                      onChange={(e) => setButtType(e.target.value)}
-                    >
-                      {FEMALE_BUTT_TYPES.map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                      onChange={setButtType}
+                    />
+                  </div>
+                </>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="text-sm text-zinc-400">
-                    Complexión
-                    <select
-                      className={`${inputClass} mt-1`}
+                <>
+                  <div className="space-y-2">
+                    <p className="text-sm text-zinc-400">Complexión</p>
+                    <EmojiPicker
+                      options={MALE_BODY_OPTIONS}
                       value={bodyBuild}
-                      onChange={(e) => setBodyBuild(e.target.value)}
-                    >
-                      {MALE_BODY_BUILDS.map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-sm text-zinc-400">
-                    Tamaño
-                    <select
-                      className={`${inputClass} mt-1`}
-                      value={penisSize}
-                      onChange={(e) => setPenisSize(e.target.value)}
-                    >
-                      {MALE_PENIS_SIZES.map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
+                      onChange={setBodyBuild}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-zinc-400">Tamaño del miembro</p>
+                    <div className="mb-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setUsePenisCm(false)}
+                        className={`rounded-full border px-3 py-1 text-xs ${
+                          !usePenisCm
+                            ? 'border-vibra-pink bg-vibra-pink/20 text-white'
+                            : 'border-vibra-border text-zinc-400'
+                        }`}
+                      >
+                        Categoría
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUsePenisCm(true)}
+                        className={`rounded-full border px-3 py-1 text-xs ${
+                          usePenisCm
+                            ? 'border-vibra-pink bg-vibra-pink/20 text-white'
+                            : 'border-vibra-border text-zinc-400'
+                        }`}
+                      >
+                        En cm
+                      </button>
+                    </div>
+                    {usePenisCm ? (
+                      <label className="block text-sm text-zinc-400">
+                        Centímetros
+                        <input
+                          type="number"
+                          min={5}
+                          max={40}
+                          step={0.5}
+                          className={`${inputClass} mt-1`}
+                          value={penisCm}
+                          onChange={(e) => setPenisCm(e.target.value)}
+                          placeholder="Ej: 18"
+                        />
+                      </label>
+                    ) : (
+                      <EmojiPicker
+                        options={MALE_PENIS_OPTIONS}
+                        value={penisSize}
+                        onChange={setPenisSize}
+                      />
+                    )}
+                  </div>
+                </>
               )}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-sm text-zinc-400">
-                  Ton de piel
-                  <select
-                    className={`${inputClass} mt-1`}
-                    value={skinTone}
-                    onChange={(e) => setSkinTone(e.target.value)}
-                  >
-                    {SKIN_TONES.map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-sm text-zinc-400">
-                  Cabello
-                  <select
-                    className={`${inputClass} mt-1`}
-                    value={hair}
-                    onChange={(e) => setHair(e.target.value)}
-                  >
-                    {HAIR_STYLES.map((v) => (
-                      <option key={v} value={v}>
-                        {v}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div className="space-y-2">
+                <p className="text-sm text-zinc-400">Tono de piel</p>
+                <EmojiPicker options={SKIN_TONE_OPTIONS} value={skinTone} onChange={setSkinTone} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-zinc-400">Cabello</p>
+                <EmojiPicker
+                  options={isFemale ? FEMALE_HAIR_OPTIONS : MALE_HAIR_OPTIONS}
+                  value={hair}
+                  onChange={setHair}
+                />
               </div>
             </section>
 

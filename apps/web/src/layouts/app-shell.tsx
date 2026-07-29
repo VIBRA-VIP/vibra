@@ -1,13 +1,13 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Compass, MessageCircle, Users, Coins, LogOut, Settings } from 'lucide-react';
+import { Compass, MessageCircle, Coins, LogOut, Settings } from 'lucide-react';
 import { AppVersion, Logo } from '@/components';
 import { logoutRequest } from '@/features/auth';
+import { mediaSrc } from '@/features/media/services/media-api';
 import { useAuthStore } from '@/store';
 import { cn } from '@/utils';
 
 const nav = [
   { to: '/explore', label: 'Explorar', icon: Compass },
-  { to: '/explore', label: 'Personas', icon: Users },
   { to: '/chats', label: 'Chats', icon: MessageCircle, badge: 0 },
   { to: '/settings', label: 'Ajustes', icon: Settings },
 ];
@@ -29,6 +29,7 @@ export function AppShell() {
   }
 
   const displayName = user?.profile?.displayName ?? 'Usuario';
+  const avatarUrl = user?.profile?.avatarUrl;
   const initial = displayName.charAt(0).toUpperCase();
   const balance = user?.walletBalance ?? 0;
 
@@ -72,9 +73,17 @@ export function AppShell() {
             </button>
           </div>
           <div className="flex items-center gap-3 rounded-lg px-1 py-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold">
-              {initial}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={mediaSrc(avatarUrl)}
+                alt={displayName}
+                className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-vibra-border"
+              />
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold">
+                {initial}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{displayName}</p>
               <p className="text-xs text-vibra-pink">{user?.role ?? 'CLIENT'}</p>
@@ -98,9 +107,9 @@ export function AppShell() {
         </main>
         <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-vibra-border bg-vibra-elevated/95 backdrop-blur md:hidden">
           {[
-            { to: '/explore', label: 'Personas', icon: Users },
-            { to: '/chats', label: 'Chats', icon: MessageCircle },
             { to: '/explore', label: 'Explorar', icon: Compass },
+            { to: '/chats', label: 'Chats', icon: MessageCircle },
+            { to: '/settings', label: 'Ajustes', icon: Settings },
           ].map((item) => (
             <NavLink
               key={item.label}
