@@ -4,6 +4,7 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:all": "bash scripts/dev.sh",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "db:up": "DOCKER_CONFIG=\"$(pwd)/.docker\" docker compose up -d",

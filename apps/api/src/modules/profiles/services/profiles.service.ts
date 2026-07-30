@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { MediaType, ProfileGender, UserRole } from '@prisma/client';
+import { MediaType, ProfileGender, UserRole, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 import type {
   CompleteProfileDto,
@@ -43,11 +43,21 @@ export class ProfilesService {
       if (galleryUrls.length < 1 || galleryUrls.length > 8) {
         throw new BadRequestException('Las modelos deben subir entre 1 y 8 fotos');
       }
+      const idUrl = dto.idDocumentUrl?.trim() || user.profile.idDocumentUrl;
+      if (!idUrl) {
+        throw new BadRequestException(
+          'Sube una foto de tu documento de identidad para enviar la solicitud',
+        );
+      }
     } else if (dto.avatarUrl == null && galleryUrls.length === 0 && !user.profile.avatarUrl) {
       throw new BadRequestException('Agrega una foto de perfil');
     }
 
     const avatarUrl = dto.avatarUrl ?? galleryUrls[0] ?? user.profile.avatarUrl ?? undefined;
+    const idDocumentUrl =
+      isModel
+        ? (dto.idDocumentUrl?.trim() || user.profile.idDocumentUrl || undefined)
+        : undefined;
 
     if (galleryUrls.length) {
       await this.prisma.media.deleteMany({ where: { userId, type: MediaType.GALLERY } });
@@ -75,6 +85,20 @@ export class ProfilesService {
       });
     }
 
+    if (idDocumentUrl) {
+      await this.prisma.media.deleteMany({ where: { userId, type: MediaType.ID_DOCUMENT } });
+      await this.prisma.media.create({
+        data: {
+          userId,
+          type: MediaType.ID_DOCUMENT,
+          url: idDocumentUrl,
+          key: `id-documents/${userId}/main`,
+          sortOrder: 0,
+        },
+      });
+    }
+
+    const markingComplete = dto.markCompleted !== false;
     const profile = await this.prisma.profile.update({
       where: { userId },
       data: {
@@ -95,10 +119,52 @@ export class ProfilesService {
         acceptsEncounters: isModel
           ? (dto.acceptsEncounters ?? user.profile.acceptsEncounters)
           : false,
-        profileCompleted: dto.markCompleted === false ? user.profile.profileCompleted : true,
+        profileCompleted: markingComplete ? true : user.profile.profileCompleted,
+        ...(isModel && idDocumentUrl
+          ? {
+              idDocumentUrl,
+              verificationStatus: VerificationStatus.PENDING,
+              verificationSubmittedAt: new Date(),
+              isVerified: false,
+            }
+          : {}),
       },
     });
 
+    return this.mapProfile(profile);
+  }
+
+  async setIdDocument(userId: string, idDocumentUrl: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true },
+    });
+    if (!user?.profile) throw new NotFoundException('Perfil no encontrado');
+    if (user.role !== UserRole.MODEL) {
+      throw new BadRequestException('Solo las modelos suben documento de identidad');
+    }
+
+    const url = idDocumentUrl.trim();
+    await this.prisma.media.deleteMany({ where: { userId, type: MediaType.ID_DOCUMENT } });
+    await this.prisma.media.create({
+      data: {
+        userId,
+        type: MediaType.ID_DOCUMENT,
+        url,
+        key: `id-documents/${userId}/main`,
+        sortOrder: 0,
+      },
+    });
+
+    const profile = await this.prisma.profile.update({
+      where: { userId },
+      data: {
+        idDocumentUrl: url,
+        verificationStatus: VerificationStatus.PENDING,
+        verificationSubmittedAt: new Date(),
+        isVerified: false,
+      },
+    });
     return this.mapProfile(profile);
   }
 
@@ -180,6 +246,7 @@ export class ProfilesService {
     const where: Record<string, unknown> = {
       user: { role: UserRole.MODEL, isActive: true },
       profileCompleted: true,
+      verificationStatus: VerificationStatus.APPROVED,
     };
 
     if (params.gender === 'FEMALE' || params.gender === 'MALE') {

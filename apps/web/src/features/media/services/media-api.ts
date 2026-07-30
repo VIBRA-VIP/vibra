@@ -1,6 +1,6 @@
 import { api } from '@/services/api';
 
-export type UploadMediaType = 'AVATAR' | 'BANNER' | 'GALLERY' | 'CHAT_IMAGE';
+export type UploadMediaType = 'AVATAR' | 'BANNER' | 'GALLERY' | 'CHAT_IMAGE' | 'ID_DOCUMENT';
 
 export type UploadMediaResult = {
   url: string;

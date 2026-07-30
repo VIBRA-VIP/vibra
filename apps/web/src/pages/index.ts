@@ -7,3 +7,4 @@ export { AdminPage } from './admin-page';
 export { OnboardingPage } from './onboarding-page';
 export { SettingsPage } from './settings-page';
 export { RequestsPage } from './requests-page';
+export { PendingVerificationPage } from './pending-verification-page';

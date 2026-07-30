@@ -244,3 +244,23 @@ export function getPayoutOptionName(id: number | null | undefined): string | nul
   if (id == null) return null;
   return COLOMBIA_PAYOUT_OPTIONS.find((b) => b.id === id)?.name ?? null;
 }
+
+/** 1 crédito ≈ este valor en pesos colombianos (referencia para modelos y usuarios). */
+export const CREDIT_VALUE_COP = 100;
+
+export function creditsToCop(credits: number): number {
+  const n = Number.isFinite(credits) ? Math.max(0, credits) : 0;
+  return Math.round(n * CREDIT_VALUE_COP);
+}
+
+export function formatCop(amount: number): string {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export function formatCreditsCopHint(credits: number): string {
+  return `≈ ${formatCop(creditsToCop(credits))}`;
+}

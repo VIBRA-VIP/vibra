@@ -19,6 +19,7 @@ enum MediaType {
   GALLERY
   VIDEO
   CHAT_IMAGE
+  ID_DOCUMENT
 }
 
 enum MessageType {
@@ -70,6 +71,13 @@ enum ReportStatus {
   DISMISSED
 }
 
+enum VerificationStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id            String    @id @default(uuid()) @db.Uuid
   email         String    @unique
@@ -113,6 +121,9 @@ model Profile {
   isOnline        Boolean  @default(false) @map("is_online")
   isAvailable     Boolean  @default(false) @map("is_available")
   isVerified      Boolean  @default(false) @map("is_verified")
+  verificationStatus VerificationStatus @default(NOT_REQUIRED) @map("verification_status")
+  idDocumentUrl   String?  @map("id_document_url")
+  verificationSubmittedAt DateTime? @map("verification_submitted_at")
   profileCompleted Boolean @default(false) @map("profile_completed")
   rating          Float    @default(0)
   ratingCount     Int      @default(0) @map("rating_count")
@@ -142,6 +153,7 @@ model Profile {
   @@index([rating])
   @@index([gender])
   @@index([profileCompleted])
+  @@index([verificationStatus])
   @@map("profiles")
 }
 

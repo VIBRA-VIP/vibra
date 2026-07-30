@@ -2,11 +2,15 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
+  IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
 import { ProfileGender, UserRole } from '@prisma/client';
+
+const MEDIA_URL = /^(https?:\/\/.+|\/uploads\/.+)$/;
 
 export class RegisterDto {
   @IsEmail()
@@ -30,4 +34,10 @@ export class RegisterDto {
 
   @IsBoolean()
   acceptedTerms!: boolean;
+
+  /** Required for MODEL at register time (validated in service). */
+  @IsOptional()
+  @IsString()
+  @Matches(MEDIA_URL)
+  idDocumentUrl?: string;
 }

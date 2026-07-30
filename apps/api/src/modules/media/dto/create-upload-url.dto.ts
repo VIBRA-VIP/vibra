@@ -6,6 +6,7 @@ const ALLOWED: ReadonlySet<MediaType> = new Set([
   MediaType.BANNER,
   MediaType.GALLERY,
   MediaType.CHAT_IMAGE,
+  MediaType.ID_DOCUMENT,
 ]);
 
 export class CreateUploadUrlDto {

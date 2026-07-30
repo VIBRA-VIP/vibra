@@ -200,9 +200,7 @@ export function ExplorePage() {
                   {model.displayName}{' '}
                   {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
                 </p>
-                <p className="text-xs text-zinc-300">
-                  {model.age} · ★ {model.rating.toFixed(1)}
-                </p>
+                <p className="text-xs text-zinc-300">{model.age} años</p>
                 <p className="mt-1 text-[11px] text-zinc-400">
                   Chat {model.chatPricePerMin} · Video {model.videoPricePerMin} créd/min
                 </p>

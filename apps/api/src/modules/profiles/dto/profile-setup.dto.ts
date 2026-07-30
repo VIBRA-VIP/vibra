@@ -78,6 +78,17 @@ export class CompleteProfileDto {
   @IsOptional()
   @IsBoolean()
   markCompleted?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(MEDIA_URL)
+  idDocumentUrl?: string;
+}
+
+export class SetIdDocumentDto {
+  @IsString()
+  @Matches(MEDIA_URL)
+  idDocumentUrl!: string;
 }
 
 export class UpdatePayoutDto {

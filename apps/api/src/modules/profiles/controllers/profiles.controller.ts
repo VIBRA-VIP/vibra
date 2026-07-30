@@ -3,6 +3,7 @@ import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import {
   CompleteProfileDto,
+  SetIdDocumentDto,
   UpdatePayoutDto,
   UpdateSettingsDto,
 } from '../dto/profile-setup.dto';
@@ -27,6 +28,12 @@ export class ProfilesController {
   @Post('complete')
   complete(@CurrentUser() user: { id: string }, @Body() body: CompleteProfileDto) {
     return this.profilesService.completeProfile(user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('id-document')
+  setIdDocument(@CurrentUser() user: { id: string }, @Body() body: SetIdDocumentDto) {
+    return this.profilesService.setIdDocument(user.id, body.idDocumentUrl);
   }
 
   @UseGuards(JwtAuthGuard)

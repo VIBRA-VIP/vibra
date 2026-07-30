@@ -8,6 +8,8 @@ export interface AuthUser {
   acceptedTermsAt?: string | null;
   createdAt: string;
   needsOnboarding?: boolean;
+  needsVerification?: boolean;
+  verificationStatus?: string;
   profile: {
     id: string;
     displayName: string;
@@ -17,6 +19,9 @@ export interface AuthUser {
     gender?: string;
     tags?: string[];
     profileCompleted?: boolean;
+    verificationStatus?: string;
+    isVerified?: boolean;
+    hasIdDocument?: boolean;
     chatPricePerMin?: number;
     videoPricePerMin?: number;
     messagePrice?: number;
@@ -44,6 +49,7 @@ export async function registerRequest(payload: {
   role: 'CLIENT' | 'MODEL';
   gender: 'FEMALE' | 'MALE';
   acceptedTerms: boolean;
+  idDocumentUrl?: string;
 }) {
   const { data } = await api.post<AuthResponse>('/api/auth/register', payload);
   return data;

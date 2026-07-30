@@ -20,8 +20,20 @@ export function ProtectedRoute() {
   }
 
   const onOnboarding = location.pathname.startsWith('/onboarding');
+  const onPending = location.pathname.startsWith('/pending-verification');
+
   if (user?.needsOnboarding && !onOnboarding) {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  if (
+    !user?.needsOnboarding &&
+    user?.needsVerification &&
+    user.role === 'MODEL' &&
+    !onPending &&
+    !onOnboarding
+  ) {
+    return <Navigate to="/pending-verification" replace />;
   }
 
   return <Outlet />;

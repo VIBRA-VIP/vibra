@@ -52,7 +52,7 @@ export function PhotoUploader({
       }
       setBusyIndex(next.length);
       try {
-        const result = await uploadMediaFile(file, next.length === 0 ? 'AVATAR' : type);
+        const result = await uploadMediaFile(file, type);
         next.push(result.url);
         onChange([...next]);
       } catch (err: unknown) {

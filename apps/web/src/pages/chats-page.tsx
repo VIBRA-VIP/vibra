@@ -10,6 +10,11 @@ import {
   type ChatConversationDto,
   type ChatPeer,
 } from '@/features/chat/chat-api';
+import {
+  connectChatSocket,
+  disconnectChatSocket,
+  getChatSocket,
+} from '@/features/chat/chat-socket';
 import { purgeLegacySharedChatStorage } from '@/features/chat/local-chat-storage';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { useAuthStore } from '@/store';
@@ -19,32 +24,107 @@ export function ChatsPage() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
   const myId = user?.id;
   const isModel = user?.role === 'MODEL';
 
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activePeer, setActivePeer] = useState<ChatPeer | null>(null);
   const [draft, setDraft] = useState('');
+  const [peerTyping, setPeerTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const openingPeerRef = useRef<string | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingEmitRef = useRef(0);
+  const peerTypingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     purgeLegacySharedChatStorage();
   }, []);
 
+  useEffect(() => {
+    const sock = connectChatSocket(accessToken);
+    if (!sock) return;
+
+    const onMessage = (payload: { conversationId?: string }) => {
+      void queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', myId] });
+      if (payload.conversationId) {
+        void queryClient.invalidateQueries({
+          queryKey: ['chat', 'messages', payload.conversationId],
+        });
+      }
+      if (payload.conversationId && payload.conversationId === activeConversationId) {
+        setPeerTyping(false);
+      }
+    };
+
+    const onTyping = (payload: {
+      conversationId?: string;
+      userId?: string;
+      isTyping?: boolean;
+    }) => {
+      if (!payload.conversationId || payload.conversationId !== activeConversationId) return;
+      if (payload.userId === myId) return;
+      setPeerTyping(Boolean(payload.isTyping));
+      if (peerTypingClearRef.current) clearTimeout(peerTypingClearRef.current);
+      if (payload.isTyping) {
+        peerTypingClearRef.current = setTimeout(() => setPeerTyping(false), 3000);
+      }
+    };
+
+    sock.on('chat:message', onMessage);
+    sock.on('chat:typing', onTyping);
+    return () => {
+      sock.off('chat:message', onMessage);
+      sock.off('chat:typing', onTyping);
+      disconnectChatSocket();
+      if (peerTypingClearRef.current) clearTimeout(peerTypingClearRef.current);
+    };
+  }, [accessToken, myId, queryClient, activeConversationId]);
+
+  useEffect(() => {
+    setPeerTyping(false);
+  }, [activeConversationId]);
+
+  function emitTyping(isTyping: boolean) {
+    const sock = getChatSocket();
+    if (!sock || !activeConversationId || !activePeer?.userId) return;
+    sock.emit('chat:typing', {
+      conversationId: activeConversationId,
+      peerUserId: activePeer.userId,
+      isTyping,
+    });
+  }
+
+  function onDraftChange(value: string) {
+    setDraft(value);
+    if (!activeConversationId || !activePeer?.userId) return;
+
+    const now = Date.now();
+    if (value.trim()) {
+      if (now - lastTypingEmitRef.current > 1200) {
+        lastTypingEmitRef.current = now;
+        emitTyping(true);
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => emitTyping(false), 1800);
+    } else {
+      emitTyping(false);
+    }
+  }
   const conversationsQuery = useQuery({
     queryKey: ['chat', 'conversations', myId],
     queryFn: listConversationsRequest,
     enabled: Boolean(myId),
-    refetchInterval: activeConversationId ? 4000 : 8000,
+    refetchInterval: 3000,
   });
 
   const messagesQuery = useQuery({
     queryKey: ['chat', 'messages', activeConversationId],
     queryFn: () => listMessagesRequest(activeConversationId!),
     enabled: Boolean(activeConversationId),
-    refetchInterval: 2500,
+    refetchInterval: 1500,
   });
 
   useEffect(() => {
@@ -75,13 +155,14 @@ export function ChatsPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messagesQuery.data?.length, activeConversationId]);
+  }, [messagesQuery.data?.length, activeConversationId, peerTyping]);
 
   const sendMutation = useMutation({
     mutationFn: (content: string) => sendMessageRequest(activeConversationId!, content),
     onSuccess: async () => {
       setDraft('');
       setError(null);
+      emitTyping(false);
       await queryClient.invalidateQueries({ queryKey: ['chat', 'messages', activeConversationId] });
       await queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', myId] });
     },
@@ -152,8 +233,14 @@ export function ChatsPage() {
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{activePeer.displayName}</p>
             <p className="text-xs text-zinc-400">
-              @{activePeer.username}
-              {activePeer.isOnline ? ' · En línea' : ''}
+              {peerTyping ? (
+                <span className="text-vibra-pink">escribiendo...</span>
+              ) : (
+                <>
+                  @{activePeer.username}
+                  {activePeer.isOnline ? ' · En línea' : ''}
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -197,6 +284,17 @@ export function ChatsPage() {
               </div>
             ))
           )}
+          {peerTyping ? (
+            <div className="flex justify-start">
+              <div className="rounded-2xl rounded-bl-md bg-vibra-muted px-3.5 py-2 text-sm text-zinc-400">
+                <span className="inline-flex gap-1">
+                  <span className="animate-bounce [animation-delay:0ms]">.</span>
+                  <span className="animate-bounce [animation-delay:150ms]">.</span>
+                  <span className="animate-bounce [animation-delay:300ms]">.</span>
+                </span>
+              </div>
+            </div>
+          ) : null}
           <div ref={bottomRef} />
         </div>
 
@@ -211,7 +309,7 @@ export function ChatsPage() {
         >
           <input
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => onDraftChange(e.target.value)}
             placeholder="Escribe un mensaje..."
             className="flex-1 rounded-xl border border-vibra-border bg-vibra-muted px-4 py-3 text-sm outline-none focus:border-vibra-pink/50"
           />

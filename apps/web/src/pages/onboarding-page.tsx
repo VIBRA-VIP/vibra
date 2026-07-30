@@ -14,6 +14,7 @@ import {
 } from '@vibra/shared';
 import { meRequest } from '@/features/auth';
 import { PhotoUploader } from '@/features/media/components/photo-uploader';
+import { ModelPricingFields } from '@/features/profiles/components/model-pricing-fields';
 import { completeProfileRequest } from '@/features/profiles/services/profile-setup-api';
 import { useAuthStore } from '@/store';
 
@@ -102,6 +103,7 @@ export function OnboardingPage() {
   const [videoPricePerMin, setVideoPricePerMin] = useState(80);
   const [contentPrice, setContentPrice] = useState(100);
   const [acceptsEncounters, setAcceptsEncounters] = useState(false);
+  const [idDocumentUrls, setIdDocumentUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -114,6 +116,9 @@ export function OnboardingPage() {
 
   if (!accessToken) return <Navigate to="/login" replace />;
   if (user && !user.needsOnboarding && user.profile?.profileCompleted) {
+    if (isModel && user.needsVerification) {
+      return <Navigate to="/pending-verification" replace />;
+    }
     return <Navigate to={isModel ? '/requests' : '/explore'} replace />;
   }
 
@@ -127,6 +132,10 @@ export function OnboardingPage() {
     const urls = photoUrls.map((u) => u.trim()).filter(Boolean);
     if (isModel && (urls.length < 1 || urls.length > 8)) {
       setError('Sube entre 1 y 8 fotos de perfil/galería');
+      return;
+    }
+    if (isModel && idDocumentUrls.length < 1 && !user?.profile?.hasIdDocument) {
+      setError('Sube una foto de tu documento de identidad');
       return;
     }
     if (!isModel && urls.length < 1) {
@@ -167,11 +176,12 @@ export function OnboardingPage() {
         videoPricePerMin: isModel ? videoPricePerMin : undefined,
         contentPrice: isModel ? contentPrice : undefined,
         acceptsEncounters: isModel ? acceptsEncounters : false,
+        idDocumentUrl: isModel ? idDocumentUrls[0] : undefined,
         markCompleted: true,
       });
       const me = await meRequest();
       setUser(me);
-      navigate(isModel ? '/requests' : '/explore', { replace: true });
+      navigate(isModel ? '/pending-verification' : '/explore', { replace: true });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
@@ -332,58 +342,33 @@ export function OnboardingPage() {
               </div>
             </section>
 
+            <ModelPricingFields
+              messagePrice={messagePrice}
+              chatPricePerMin={chatPricePerMin}
+              videoPricePerMin={videoPricePerMin}
+              contentPrice={contentPrice}
+              acceptsEncounters={acceptsEncounters}
+              onMessagePrice={setMessagePrice}
+              onChatPricePerMin={setChatPricePerMin}
+              onVideoPricePerMin={setVideoPricePerMin}
+              onContentPrice={setContentPrice}
+              onAcceptsEncounters={setAcceptsEncounters}
+            />
+
             <section className="space-y-3">
-              <h2 className="font-display text-lg font-semibold">Precios (créditos)</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-sm text-zinc-400">
-                  Por mensaje
-                  <input
-                    type="number"
-                    min={0}
-                    className={`${inputClass} mt-1`}
-                    value={messagePrice}
-                    onChange={(e) => setMessagePrice(Number(e.target.value))}
-                  />
-                </label>
-                <label className="text-sm text-zinc-400">
-                  Chat / min
-                  <input
-                    type="number"
-                    min={0}
-                    className={`${inputClass} mt-1`}
-                    value={chatPricePerMin}
-                    onChange={(e) => setChatPricePerMin(Number(e.target.value))}
-                  />
-                </label>
-                <label className="text-sm text-zinc-400">
-                  Video / min
-                  <input
-                    type="number"
-                    min={0}
-                    className={`${inputClass} mt-1`}
-                    value={videoPricePerMin}
-                    onChange={(e) => setVideoPricePerMin(Number(e.target.value))}
-                  />
-                </label>
-                <label className="text-sm text-zinc-400">
-                  Contenido
-                  <input
-                    type="number"
-                    min={0}
-                    className={`${inputClass} mt-1`}
-                    value={contentPrice}
-                    onChange={(e) => setContentPrice(Number(e.target.value))}
-                  />
-                </label>
-              </div>
-              <label className="flex items-center gap-3 text-sm text-zinc-300">
-                <input
-                  type="checkbox"
-                  checked={acceptsEncounters}
-                  onChange={(e) => setAcceptsEncounters(e.target.checked)}
-                />
-                Acepto encuentros / citas
-              </label>
+              <h2 className="font-display text-lg font-semibold">Documento de identidad</h2>
+              <p className="text-sm text-zinc-400">
+                {user?.profile?.hasIdDocument
+                  ? 'Ya recibimos tu documento en el registro. Puedes reemplazarlo si quieres.'
+                  : 'Sube una foto clara de tu cédula o documento. Es obligatorio para verificar tu perfil.'}
+              </p>
+              <PhotoUploader
+                photos={idDocumentUrls}
+                onChange={setIdDocumentUrls}
+                max={1}
+                type="ID_DOCUMENT"
+                label="Foto del documento"
+              />
             </section>
           </>
         ) : null}
@@ -394,7 +379,13 @@ export function OnboardingPage() {
           disabled={loading}
           className="w-full rounded-xl bg-vibra-pink py-3 text-sm font-semibold disabled:opacity-60"
         >
-          {loading ? 'Guardando...' : 'Terminar registro'}
+          {loading
+            ? isModel
+              ? 'Enviando solicitud...'
+              : 'Guardando...'
+            : isModel
+              ? 'Enviar solicitud'
+              : 'Terminar registro'}
         </button>
       </form>
     </div>

@@ -10,6 +10,11 @@ export async function completeProfileRequest(payload: Record<string, unknown>) {
   return data;
 }
 
+export async function setIdDocumentRequest(idDocumentUrl: string) {
+  const { data } = await api.post('/api/profiles/id-document', { idDocumentUrl });
+  return data;
+}
+
 export async function updateSettingsRequest(payload: Record<string, unknown>) {
   const { data } = await api.patch('/api/profiles/settings', payload);
   return data;

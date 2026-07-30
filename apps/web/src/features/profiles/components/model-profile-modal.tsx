@@ -160,8 +160,7 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
               {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
             </h2>
             <p className="mt-1 text-sm text-zinc-400">
-              {model.age} · ★ {model.rating.toFixed(1)} ({model.ratingCount}) · @
-              {model.username}
+              {model.age} · @{model.username}
             </p>
             <p
               className={cn(

@@ -7,6 +7,7 @@ import {
 } from '@vibra/shared';
 import { meRequest } from '@/features/auth';
 import { PhotoUploader } from '@/features/media/components/photo-uploader';
+import { ModelPricingFields } from '@/features/profiles/components/model-pricing-fields';
 import {
   getMyProfile,
   updatePayoutRequest,
@@ -54,7 +55,14 @@ export function SettingsPage() {
               .map((g) => g.url)
               .filter((u): u is string => Boolean(u))
           : [];
-        setGalleryUrls(gallery);
+        // Si no hay galería aún, usa el avatar como primera foto visible.
+        const photos =
+          gallery.length > 0
+            ? gallery
+            : profile.avatarUrl
+              ? [String(profile.avatarUrl)]
+              : [];
+        setGalleryUrls(photos);
         setMessagePrice(Number(profile.messagePrice ?? 10));
         setChatPricePerMin(Number(profile.chatPricePerMin ?? 15));
         setVideoPricePerMin(Number(profile.videoPricePerMin ?? 80));
@@ -145,28 +153,32 @@ export function SettingsPage() {
           onChange={(e) => setDisplayName(e.target.value)}
           placeholder="Nombre visible"
         />
-        <div className="space-y-2">
-          <p className="text-sm text-zinc-400">Foto de perfil</p>
-          <PhotoUploader
-            photos={avatarUrl ? [avatarUrl] : []}
-            onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
-            max={1}
-            type="AVATAR"
-            label="Elegir foto"
-          />
-        </div>
         {isModel ? (
           <div className="space-y-2">
             <p className="text-sm text-zinc-400">Galería (hasta 8 fotos)</p>
             <PhotoUploader
               photos={galleryUrls}
-              onChange={setGalleryUrls}
+              onChange={(urls) => {
+                setGalleryUrls(urls);
+                setAvatarUrl(urls[0] ?? '');
+              }}
               max={8}
               type="GALLERY"
               label="Agregar foto"
             />
           </div>
-        ) : null}
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-zinc-400">Foto de perfil</p>
+            <PhotoUploader
+              photos={avatarUrl ? [avatarUrl] : []}
+              onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
+              max={1}
+              type="AVATAR"
+              label="Elegir foto"
+            />
+          </div>
+        )}
         <textarea
           className={inputClass}
           rows={4}
@@ -176,52 +188,18 @@ export function SettingsPage() {
         />
 
         {isModel ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm text-zinc-400">
-              Mensaje
-              <input
-                type="number"
-                className={`${inputClass} mt-1`}
-                value={messagePrice}
-                onChange={(e) => setMessagePrice(Number(e.target.value))}
-              />
-            </label>
-            <label className="text-sm text-zinc-400">
-              Chat / min
-              <input
-                type="number"
-                className={`${inputClass} mt-1`}
-                value={chatPricePerMin}
-                onChange={(e) => setChatPricePerMin(Number(e.target.value))}
-              />
-            </label>
-            <label className="text-sm text-zinc-400">
-              Video / min
-              <input
-                type="number"
-                className={`${inputClass} mt-1`}
-                value={videoPricePerMin}
-                onChange={(e) => setVideoPricePerMin(Number(e.target.value))}
-              />
-            </label>
-            <label className="text-sm text-zinc-400">
-              Contenido
-              <input
-                type="number"
-                className={`${inputClass} mt-1`}
-                value={contentPrice}
-                onChange={(e) => setContentPrice(Number(e.target.value))}
-              />
-            </label>
-            <label className="col-span-full flex items-center gap-3 text-sm text-zinc-300">
-              <input
-                type="checkbox"
-                checked={acceptsEncounters}
-                onChange={(e) => setAcceptsEncounters(e.target.checked)}
-              />
-              Acepta encuentros
-            </label>
-          </div>
+          <ModelPricingFields
+            messagePrice={messagePrice}
+            chatPricePerMin={chatPricePerMin}
+            videoPricePerMin={videoPricePerMin}
+            contentPrice={contentPrice}
+            acceptsEncounters={acceptsEncounters}
+            onMessagePrice={setMessagePrice}
+            onChatPricePerMin={setChatPricePerMin}
+            onVideoPricePerMin={setVideoPricePerMin}
+            onContentPrice={setContentPrice}
+            onAcceptsEncounters={setAcceptsEncounters}
+          />
         ) : null}
 
         <button

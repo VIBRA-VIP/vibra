@@ -26,7 +26,7 @@ export function ProfilePage() {
             <h1 className="font-display text-3xl font-bold">
               Camila <span className="text-vibra-pink">✓</span>
             </h1>
-            <p className="mt-1 text-sm text-zinc-400">★ 4.9 (120) · @{id ?? 'camila'}</p>
+            <p className="mt-1 text-sm text-zinc-400">@{id ?? 'camila'}</p>
           </div>
           <div className="flex items-center gap-2">
             <button

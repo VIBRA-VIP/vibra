@@ -23,6 +23,7 @@ const FOLDER: Record<string, string> = {
   GALLERY: 'gallery',
   CHAT_IMAGE: 'chat',
   VIDEO: 'video',
+  ID_DOCUMENT: 'id-documents',
 };
 
 const ALLOWED_MIME = new Set([

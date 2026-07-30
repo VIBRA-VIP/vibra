@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { MessageType } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
+import { RealtimeGateway } from '../gateways/chat.gateway';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeGateway,
+  ) {}
 
   health() {
     return { module: 'chat', status: 'ok' };
@@ -107,13 +111,27 @@ export class ChatService {
       data: { lastMessageAt: message.createdAt },
     });
 
-    return {
+    const payload = {
       id: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
       content: message.content,
       type: message.type,
       createdAt: message.createdAt.toISOString(),
+    };
+
+    const members = await this.prisma.conversationMember.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+    this.realtime.emitToUsers(
+      members.map((m) => m.userId),
+      'chat:message',
+      { ...payload, conversationId },
+    );
+
+    return {
+      ...payload,
       fromMe: true,
     };
   }

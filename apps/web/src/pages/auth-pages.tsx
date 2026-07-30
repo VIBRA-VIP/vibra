@@ -1,7 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from '@/components';
-import { loginRequest, registerRequest } from '@/features/auth';
+import { loginRequest, meRequest, registerRequest } from '@/features/auth';
+import { mediaSrc, uploadMediaFile } from '@/features/media/services/media-api';
+import { setIdDocumentRequest } from '@/features/profiles/services/profile-setup-api';
 import { useAuthStore } from '@/store';
 
 function AuthCard({
@@ -28,6 +30,12 @@ function AuthCard({
 const inputClass =
   'w-full rounded-xl border border-vibra-border bg-vibra-muted px-4 py-3 text-sm outline-none focus:border-vibra-pink/50';
 
+function homeFor(user: { role?: string; needsOnboarding?: boolean; needsVerification?: boolean }) {
+  if (user.needsOnboarding) return '/onboarding';
+  if (user.role === 'MODEL' && user.needsVerification) return '/pending-verification';
+  return user.role === 'MODEL' ? '/requests' : '/explore';
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,8 +47,8 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (accessToken) {
-    return <Navigate to={user?.role === 'MODEL' ? '/requests' : '/explore'} replace />;
+  if (accessToken && user) {
+    return <Navigate to={homeFor(user)} replace />;
   }
 
   async function onSubmit(e: FormEvent) {
@@ -50,11 +58,11 @@ export function LoginPage() {
     try {
       const res = await loginRequest({ email, password });
       setAuth(res.user, res.accessToken, res.refreshToken);
-      if (res.user.needsOnboarding) {
-        navigate('/onboarding', { replace: true });
+      const fallback = homeFor(res.user);
+      if (res.user.needsOnboarding || res.user.needsVerification) {
+        navigate(fallback, { replace: true });
         return;
       }
-      const fallback = res.user.role === 'MODEL' ? '/requests' : '/explore';
       const from = (location.state as { from?: string } | null)?.from ?? fallback;
       navigate(from, { replace: true });
     } catch (err: unknown) {
@@ -109,6 +117,7 @@ export function LoginPage() {
 export function RegisterPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setUser = useAuthStore((s) => s.setUser);
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const [role, setRole] = useState<'CLIENT' | 'MODEL'>('CLIENT');
@@ -117,11 +126,30 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [idPreview, setIdPreview] = useState<string | null>(null);
+  const [idFile, setIdFile] = useState<File | null>(null);
+  const idInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (accessToken) {
-    return <Navigate to={user?.role === 'MODEL' ? '/requests' : '/explore'} replace />;
+  if (accessToken && user) {
+    return <Navigate to={homeFor(user)} replace />;
+  }
+
+  function onIdPicked(file: File | null) {
+    if (idPreview) URL.revokeObjectURL(idPreview);
+    if (!file) {
+      setIdFile(null);
+      setIdPreview(null);
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      setError('El documento debe ser una imagen');
+      return;
+    }
+    setError(null);
+    setIdFile(file);
+    setIdPreview(URL.createObjectURL(file));
   }
 
   async function onSubmit(e: FormEvent) {
@@ -129,6 +157,10 @@ export function RegisterPage() {
     setError(null);
     if (!acceptedTerms) {
       setError('Debes aceptar términos y confirmar que eres mayor de 18 años');
+      return;
+    }
+    if (role === 'MODEL' && !idFile) {
+      setError('Sube una foto de tu documento de identidad');
       return;
     }
     setLoading(true);
@@ -142,6 +174,14 @@ export function RegisterPage() {
         acceptedTerms: true,
       });
       setAuth(res.user, res.accessToken, res.refreshToken);
+
+      if (role === 'MODEL' && idFile) {
+        const uploaded = await uploadMediaFile(idFile, 'ID_DOCUMENT');
+        await setIdDocumentRequest(uploaded.url);
+        const me = await meRequest();
+        setUser(me);
+      }
+
       navigate('/onboarding', { replace: true });
     } catch (err: unknown) {
       const message =
@@ -154,7 +194,14 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthCard title="Crear cuenta" subtitle="Solo correo, contraseña y tu nombre">
+    <AuthCard
+      title="Crear cuenta"
+      subtitle={
+        role === 'MODEL'
+          ? 'Las modelos deben verificarse con documento de identidad'
+          : 'Solo correo, contraseña y tu nombre'
+      }
+    >
       <form className="space-y-4" method="post" onSubmit={onSubmit}>
         <div className="grid grid-cols-2 gap-2">
           {(
@@ -214,6 +261,46 @@ export function RegisterPage() {
           className={inputClass}
         />
 
+        {role === 'MODEL' ? (
+          <div className="space-y-2 rounded-xl border border-vibra-border bg-vibra-muted/40 p-3">
+            <p className="text-sm font-medium text-zinc-200">Documento de identidad</p>
+            <p className="text-xs text-zinc-500">
+              Foto clara de tu cédula o documento (frente). Solo se usa para verificación.
+            </p>
+            {idPreview ? (
+              <div className="relative overflow-hidden rounded-lg border border-vibra-border">
+                <img
+                  src={mediaSrc(idPreview)}
+                  alt="Documento"
+                  className="max-h-40 w-full object-contain bg-black/40"
+                />
+                <button
+                  type="button"
+                  onClick={() => onIdPicked(null)}
+                  className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs"
+                >
+                  Quitar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => idInputRef.current?.click()}
+                className="w-full rounded-xl border border-dashed border-vibra-border py-6 text-sm text-zinc-400 transition hover:border-vibra-pink/50 hover:text-white"
+              >
+                Subir foto del documento
+              </button>
+            )}
+            <input
+              ref={idInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => onIdPicked(e.target.files?.[0] ?? null)}
+            />
+          </div>
+        ) : null}
+
         <label className="flex items-start gap-3 text-sm text-zinc-300">
           <input
             type="checkbox"
@@ -230,7 +317,13 @@ export function RegisterPage() {
           disabled={loading}
           className="w-full rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover disabled:opacity-60"
         >
-          {loading ? 'Creando cuenta...' : 'Registrarse'}
+          {loading
+            ? role === 'MODEL'
+              ? 'Enviando solicitud...'
+              : 'Creando cuenta...'
+            : role === 'MODEL'
+              ? 'Enviar solicitud'
+              : 'Registrarse'}
         </button>
       </form>
       <p className="mt-6 text-center text-sm text-zinc-400">

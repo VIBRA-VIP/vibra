@@ -7,6 +7,7 @@ import {
   LandingPage,
   LoginPage,
   OnboardingPage,
+  PendingVerificationPage,
   ProfilePage,
   RegisterPage,
   RequestsPage,
@@ -26,6 +27,7 @@ export function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/pending-verification" element={<PendingVerificationPage />} />
         <Route element={<AppShell />}>
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/requests" element={<RequestsPage />} />

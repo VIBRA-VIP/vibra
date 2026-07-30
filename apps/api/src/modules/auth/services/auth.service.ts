@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import {
   ProfileGender,
   UserRole,
+  VerificationStatus,
   type Profile,
   type User,
   type Wallet,
@@ -54,6 +55,8 @@ export class AuthService {
 
     const username = await this.allocateUsername(dto.displayName);
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    const idDocumentUrl = dto.idDocumentUrl?.trim() || null;
+    const isModel = role === UserRole.MODEL;
 
     const user = await this.prisma.user.create({
       data: {
@@ -67,6 +70,11 @@ export class AuthService {
             username,
             gender,
             profileCompleted: false,
+            verificationStatus: isModel
+              ? VerificationStatus.PENDING
+              : VerificationStatus.NOT_REQUIRED,
+            idDocumentUrl: isModel ? idDocumentUrl : null,
+            verificationSubmittedAt: isModel && idDocumentUrl ? new Date() : null,
           },
         },
         wallet: {
@@ -184,6 +192,12 @@ export class AuthService {
   }
 
   private toPublicUser(user: UserWithRelations) {
+    const verificationStatus =
+      user.profile?.verificationStatus ?? VerificationStatus.NOT_REQUIRED;
+    const isModel = user.role === UserRole.MODEL;
+    const needsVerification =
+      isModel && verificationStatus !== VerificationStatus.APPROVED;
+
     return {
       id: user.id,
       email: user.email,
@@ -201,6 +215,9 @@ export class AuthService {
             gender: user.profile.gender,
             tags: user.profile.tags,
             profileCompleted: user.profile.profileCompleted,
+            verificationStatus,
+            isVerified: user.profile.isVerified,
+            hasIdDocument: Boolean(user.profile.idDocumentUrl),
             chatPricePerMin: user.profile.chatPricePerMin,
             videoPricePerMin: user.profile.videoPricePerMin,
             messagePrice: user.profile.messagePrice,
@@ -215,6 +232,8 @@ export class AuthService {
         : null,
       walletBalance: user.wallet?.balance ?? 0,
       needsOnboarding: !(user.profile?.profileCompleted ?? false),
+      needsVerification,
+      verificationStatus,
     };
   }
 }
