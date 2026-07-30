@@ -53,9 +53,16 @@ export class AuthService {
       throw new ConflictException('El correo ya está registrado');
     }
 
+    const birthDate = parseBirthDate(dto.birthDate);
+    const age = ageFromBirthDate(birthDate);
+    if (age < 18) {
+      throw new BadRequestException('Debes ser mayor de 18 años');
+    }
+
     const username = await this.allocateUsername(dto.displayName);
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const idDocumentUrl = dto.idDocumentUrl?.trim() || null;
+    const idDocumentBackUrl = dto.idDocumentBackUrl?.trim() || null;
     const isModel = role === UserRole.MODEL;
 
     const user = await this.prisma.user.create({
@@ -69,12 +76,16 @@ export class AuthService {
             displayName: dto.displayName.trim(),
             username,
             gender,
+            birthDate,
+            age,
             profileCompleted: false,
             verificationStatus: isModel
               ? VerificationStatus.PENDING
               : VerificationStatus.NOT_REQUIRED,
             idDocumentUrl: isModel ? idDocumentUrl : null,
-            verificationSubmittedAt: isModel && idDocumentUrl ? new Date() : null,
+            idDocumentBackUrl: isModel ? idDocumentBackUrl : null,
+            verificationSubmittedAt:
+              isModel && idDocumentUrl && idDocumentBackUrl ? new Date() : null,
           },
         },
         wallet: {
@@ -217,7 +228,13 @@ export class AuthService {
             profileCompleted: user.profile.profileCompleted,
             verificationStatus,
             isVerified: user.profile.isVerified,
-            hasIdDocument: Boolean(user.profile.idDocumentUrl),
+            hasIdDocument: Boolean(
+              user.profile.idDocumentUrl && user.profile.idDocumentBackUrl,
+            ),
+            birthDate: user.profile.birthDate
+              ? user.profile.birthDate.toISOString().slice(0, 10)
+              : null,
+            age: user.profile.age,
             chatPricePerMin: user.profile.chatPricePerMin,
             videoPricePerMin: user.profile.videoPricePerMin,
             messagePrice: user.profile.messagePrice,
@@ -236,4 +253,36 @@ export class AuthService {
       verificationStatus,
     };
   }
+}
+
+function parseBirthDate(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) {
+    throw new BadRequestException('Fecha de nacimiento inválida');
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new BadRequestException('Fecha de nacimiento inválida');
+  }
+  if (date.getTime() > Date.now()) {
+    throw new BadRequestException('La fecha de nacimiento no puede ser futura');
+  }
+  return date;
+}
+
+function ageFromBirthDate(birthDate: Date): number {
+  const now = new Date();
+  let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - birthDate.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < birthDate.getUTCDate())) {
+    age -= 1;
+  }
+  return age;
 }

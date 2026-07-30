@@ -33,7 +33,11 @@ export class ProfilesController {
   @UseGuards(JwtAuthGuard)
   @Post('id-document')
   setIdDocument(@CurrentUser() user: { id: string }, @Body() body: SetIdDocumentDto) {
-    return this.profilesService.setIdDocument(user.id, body.idDocumentUrl);
+    return this.profilesService.setIdDocument(
+      user.id,
+      body.idDocumentUrl,
+      body.idDocumentBackUrl,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

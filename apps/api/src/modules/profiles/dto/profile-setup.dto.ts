@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsIn,
   IsInt,
@@ -83,12 +84,25 @@ export class CompleteProfileDto {
   @IsString()
   @Matches(MEDIA_URL)
   idDocumentUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(MEDIA_URL)
+  idDocumentBackUrl?: string;
+
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string;
 }
 
 export class SetIdDocumentDto {
   @IsString()
   @Matches(MEDIA_URL)
   idDocumentUrl!: string;
+
+  @IsString()
+  @Matches(MEDIA_URL)
+  idDocumentBackUrl!: string;
 }
 
 export class UpdatePayoutDto {

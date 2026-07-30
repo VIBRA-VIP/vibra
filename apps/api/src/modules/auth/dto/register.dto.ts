@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsDateString,
   IsEmail,
   IsIn,
   IsOptional,
@@ -35,9 +36,17 @@ export class RegisterDto {
   @IsBoolean()
   acceptedTerms!: boolean;
 
-  /** Required for MODEL at register time (validated in service). */
+  /** ISO date YYYY-MM-DD */
+  @IsDateString()
+  birthDate!: string;
+
   @IsOptional()
   @IsString()
   @Matches(MEDIA_URL)
   idDocumentUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(MEDIA_URL)
+  idDocumentBackUrl?: string;
 }

@@ -43,10 +43,11 @@ export class ProfilesService {
       if (galleryUrls.length < 1 || galleryUrls.length > 8) {
         throw new BadRequestException('Las modelos deben subir entre 1 y 8 fotos');
       }
-      const idUrl = dto.idDocumentUrl?.trim() || user.profile.idDocumentUrl;
-      if (!idUrl) {
+      const idFront = dto.idDocumentUrl?.trim() || user.profile.idDocumentUrl;
+      const idBack = dto.idDocumentBackUrl?.trim() || user.profile.idDocumentBackUrl;
+      if (!idFront || !idBack) {
         throw new BadRequestException(
-          'Sube una foto de tu documento de identidad para enviar la solicitud',
+          'Sube el frente y el reverso de tu documento de identidad',
         );
       }
     } else if (dto.avatarUrl == null && galleryUrls.length === 0 && !user.profile.avatarUrl) {
@@ -58,6 +59,20 @@ export class ProfilesService {
       isModel
         ? (dto.idDocumentUrl?.trim() || user.profile.idDocumentUrl || undefined)
         : undefined;
+    const idDocumentBackUrl =
+      isModel
+        ? (dto.idDocumentBackUrl?.trim() || user.profile.idDocumentBackUrl || undefined)
+        : undefined;
+
+    let birthDate = user.profile.birthDate;
+    let age = user.profile.age;
+    if (dto.birthDate) {
+      birthDate = parseBirthDate(dto.birthDate);
+      age = ageFromBirthDate(birthDate);
+      if (age < 18) {
+        throw new BadRequestException('Debes ser mayor de 18 años');
+      }
+    }
 
     if (galleryUrls.length) {
       await this.prisma.media.deleteMany({ where: { userId, type: MediaType.GALLERY } });
@@ -85,17 +100,30 @@ export class ProfilesService {
       });
     }
 
-    if (idDocumentUrl) {
+    if (idDocumentUrl || idDocumentBackUrl) {
       await this.prisma.media.deleteMany({ where: { userId, type: MediaType.ID_DOCUMENT } });
-      await this.prisma.media.create({
-        data: {
-          userId,
-          type: MediaType.ID_DOCUMENT,
-          url: idDocumentUrl,
-          key: `id-documents/${userId}/main`,
-          sortOrder: 0,
-        },
-      });
+      if (idDocumentUrl) {
+        await this.prisma.media.create({
+          data: {
+            userId,
+            type: MediaType.ID_DOCUMENT,
+            url: idDocumentUrl,
+            key: `id-documents/${userId}/front`,
+            sortOrder: 0,
+          },
+        });
+      }
+      if (idDocumentBackUrl) {
+        await this.prisma.media.create({
+          data: {
+            userId,
+            type: MediaType.ID_DOCUMENT,
+            url: idDocumentBackUrl,
+            key: `id-documents/${userId}/back`,
+            sortOrder: 1,
+          },
+        });
+      }
     }
 
     const markingComplete = dto.markCompleted !== false;
@@ -106,6 +134,8 @@ export class ProfilesService {
         tags: dto.tags ?? user.profile.tags,
         attributes: (dto.attributes ?? user.profile.attributes) as object | undefined,
         avatarUrl: avatarUrl ?? user.profile.avatarUrl,
+        birthDate,
+        age,
         messagePrice: isModel ? (dto.messagePrice ?? user.profile.messagePrice) : user.profile.messagePrice,
         chatPricePerMin: isModel
           ? (dto.chatPricePerMin ?? user.profile.chatPricePerMin)
@@ -120,9 +150,10 @@ export class ProfilesService {
           ? (dto.acceptsEncounters ?? user.profile.acceptsEncounters)
           : false,
         profileCompleted: markingComplete ? true : user.profile.profileCompleted,
-        ...(isModel && idDocumentUrl
+        ...(isModel && idDocumentUrl && idDocumentBackUrl
           ? {
               idDocumentUrl,
+              idDocumentBackUrl,
               verificationStatus: VerificationStatus.PENDING,
               verificationSubmittedAt: new Date(),
               isVerified: false,
@@ -134,7 +165,7 @@ export class ProfilesService {
     return this.mapProfile(profile);
   }
 
-  async setIdDocument(userId: string, idDocumentUrl: string) {
+  async setIdDocument(userId: string, idDocumentUrl: string, idDocumentBackUrl: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { profile: true },
@@ -144,22 +175,33 @@ export class ProfilesService {
       throw new BadRequestException('Solo las modelos suben documento de identidad');
     }
 
-    const url = idDocumentUrl.trim();
+    const front = idDocumentUrl.trim();
+    const back = idDocumentBackUrl.trim();
     await this.prisma.media.deleteMany({ where: { userId, type: MediaType.ID_DOCUMENT } });
-    await this.prisma.media.create({
-      data: {
-        userId,
-        type: MediaType.ID_DOCUMENT,
-        url,
-        key: `id-documents/${userId}/main`,
-        sortOrder: 0,
-      },
+    await this.prisma.media.createMany({
+      data: [
+        {
+          userId,
+          type: MediaType.ID_DOCUMENT,
+          url: front,
+          key: `id-documents/${userId}/front`,
+          sortOrder: 0,
+        },
+        {
+          userId,
+          type: MediaType.ID_DOCUMENT,
+          url: back,
+          key: `id-documents/${userId}/back`,
+          sortOrder: 1,
+        },
+      ],
     });
 
     const profile = await this.prisma.profile.update({
       where: { userId },
       data: {
-        idDocumentUrl: url,
+        idDocumentUrl: front,
+        idDocumentBackUrl: back,
         verificationStatus: VerificationStatus.PENDING,
         verificationSubmittedAt: new Date(),
         isVerified: false,
@@ -485,4 +527,36 @@ export class ProfilesService {
       payoutHolder: p.payoutHolder,
     };
   }
+}
+
+function parseBirthDate(value: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) {
+    throw new BadRequestException('Fecha de nacimiento inválida');
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    throw new BadRequestException('Fecha de nacimiento inválida');
+  }
+  if (date.getTime() > Date.now()) {
+    throw new BadRequestException('La fecha de nacimiento no puede ser futura');
+  }
+  return date;
+}
+
+function ageFromBirthDate(birthDate: Date): number {
+  const now = new Date();
+  let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - birthDate.getUTCMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < birthDate.getUTCDate())) {
+    age -= 1;
+  }
+  return age;
 }

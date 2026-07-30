@@ -104,6 +104,7 @@ export function OnboardingPage() {
   const [contentPrice, setContentPrice] = useState(100);
   const [acceptsEncounters, setAcceptsEncounters] = useState(false);
   const [idDocumentUrls, setIdDocumentUrls] = useState<string[]>([]);
+  const [idDocumentBackUrls, setIdDocumentBackUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -134,8 +135,8 @@ export function OnboardingPage() {
       setError('Sube entre 1 y 8 fotos de perfil/galería');
       return;
     }
-    if (isModel && idDocumentUrls.length < 1 && !user?.profile?.hasIdDocument) {
-      setError('Sube una foto de tu documento de identidad');
+    if (isModel && (idDocumentUrls.length < 1 || idDocumentBackUrls.length < 1)) {
+      setError('Sube el frente y el reverso de tu documento de identidad');
       return;
     }
     if (!isModel && urls.length < 1) {
@@ -177,6 +178,7 @@ export function OnboardingPage() {
         contentPrice: isModel ? contentPrice : undefined,
         acceptsEncounters: isModel ? acceptsEncounters : false,
         idDocumentUrl: isModel ? idDocumentUrls[0] : undefined,
+        idDocumentBackUrl: isModel ? idDocumentBackUrls[0] : undefined,
         markCompleted: true,
       });
       const me = await meRequest();
@@ -358,17 +360,30 @@ export function OnboardingPage() {
             <section className="space-y-3">
               <h2 className="font-display text-lg font-semibold">Documento de identidad</h2>
               <p className="text-sm text-zinc-400">
-                {user?.profile?.hasIdDocument
-                  ? 'Ya recibimos tu documento en el registro. Puedes reemplazarlo si quieres.'
-                  : 'Sube una foto clara de tu cédula o documento. Es obligatorio para verificar tu perfil.'}
+                Fotos claras del frente y el reverso de tu cédula. Solo se usan para verificación.
               </p>
-              <PhotoUploader
-                photos={idDocumentUrls}
-                onChange={setIdDocumentUrls}
-                max={1}
-                type="ID_DOCUMENT"
-                label="Foto del documento"
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-zinc-400">Frente</p>
+                  <PhotoUploader
+                    photos={idDocumentUrls}
+                    onChange={setIdDocumentUrls}
+                    max={1}
+                    type="ID_DOCUMENT"
+                    label="Subir frente"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-zinc-400">Reverso</p>
+                  <PhotoUploader
+                    photos={idDocumentBackUrls}
+                    onChange={setIdDocumentBackUrls}
+                    max={1}
+                    type="ID_DOCUMENT"
+                    label="Subir reverso"
+                  />
+                </div>
+              </div>
             </section>
           </>
         ) : null}

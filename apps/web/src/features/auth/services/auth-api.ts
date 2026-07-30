@@ -22,6 +22,8 @@ export interface AuthUser {
     verificationStatus?: string;
     isVerified?: boolean;
     hasIdDocument?: boolean;
+    birthDate?: string | null;
+    age?: number;
     chatPricePerMin?: number;
     videoPricePerMin?: number;
     messagePrice?: number;
@@ -49,7 +51,9 @@ export async function registerRequest(payload: {
   role: 'CLIENT' | 'MODEL';
   gender: 'FEMALE' | 'MALE';
   acceptedTerms: boolean;
+  birthDate: string;
   idDocumentUrl?: string;
+  idDocumentBackUrl?: string;
 }) {
   const { data } = await api.post<AuthResponse>('/api/auth/register', payload);
   return data;

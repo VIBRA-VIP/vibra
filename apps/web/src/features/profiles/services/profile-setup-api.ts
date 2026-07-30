@@ -10,8 +10,14 @@ export async function completeProfileRequest(payload: Record<string, unknown>) {
   return data;
 }
 
-export async function setIdDocumentRequest(idDocumentUrl: string) {
-  const { data } = await api.post('/api/profiles/id-document', { idDocumentUrl });
+export async function setIdDocumentRequest(
+  idDocumentUrl: string,
+  idDocumentBackUrl: string,
+) {
+  const { data } = await api.post('/api/profiles/id-document', {
+    idDocumentUrl,
+    idDocumentBackUrl,
+  });
   return data;
 }
 

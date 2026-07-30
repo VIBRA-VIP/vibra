@@ -123,6 +123,7 @@ model Profile {
   isVerified      Boolean  @default(false) @map("is_verified")
   verificationStatus VerificationStatus @default(NOT_REQUIRED) @map("verification_status")
   idDocumentUrl   String?  @map("id_document_url")
+  idDocumentBackUrl String? @map("id_document_back_url")
   verificationSubmittedAt DateTime? @map("verification_submitted_at")
   profileCompleted Boolean @default(false) @map("profile_completed")
   rating          Float    @default(0)
@@ -135,6 +136,7 @@ model Profile {
   socialLinks     Json?    @map("social_links")
   tags            String[] @default([])
   gender          ProfileGender @default(FEMALE)
+  birthDate       DateTime? @map("birth_date") @db.Date
   age             Int      @default(18)
   attributes      Json?
   services        Json?
@@ -339,4 +341,17 @@ model Favorite {
   @@index([clientId])
   @@index([modelId])
   @@map("favorites")
+}
+
+/** Rotating admin unlock key (plaintext for you to copy from DB; hash used to verify). */
+model AdminSecret {
+  id        String   @id @default(uuid()) @db.Uuid
+  keyHash   String   @map("key_hash")
+  keyPlain  String   @map("key_plain")
+  label     String   @default("default")
+  rotatedAt DateTime @default(now()) @map("rotated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_secrets")
 }

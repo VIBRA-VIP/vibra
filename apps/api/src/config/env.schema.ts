@@ -32,6 +32,13 @@ export const envSchema = z.object({
   S3_PUBLIC_BASE_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
   AWS_ACCESS_KEY_ID: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   AWS_SECRET_ACCESS_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** Plaintext admin unlock key; hashed into DB on first boot if no secret exists. */
+  ADMIN_ACCESS_KEY: z.preprocess(emptyToUndefined, z.string().min(8).optional()),
+  SMTP_HOST: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  SMTP_PORT: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
+  SMTP_USER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  SMTP_PASS: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  SMTP_FROM: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;

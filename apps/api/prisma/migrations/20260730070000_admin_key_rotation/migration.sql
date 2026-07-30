@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "admin_secrets" ADD COLUMN "key_plain" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "admin_secrets" ADD COLUMN "rotated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

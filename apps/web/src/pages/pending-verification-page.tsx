@@ -1,9 +1,10 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Logo } from '@/components';
 import { useAuthStore } from '@/store';
 import { logoutRequest } from '@/features/auth';
 
 export function PendingVerificationPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -20,14 +21,16 @@ export function PendingVerificationPage() {
   }
 
   const rejected = user.verificationStatus === 'REJECTED';
+  const email = user.email;
 
-  async function handleLogout() {
+  async function handleAccept() {
     try {
       await logoutRequest(localStorage.getItem('vibra_refresh_token') ?? undefined);
     } catch {
       /* ignore */
     }
     clearAuth();
+    navigate('/login', { replace: true });
   }
 
   return (
@@ -43,7 +46,9 @@ export function PendingVerificationPage() {
         <p className="mt-3 text-sm leading-relaxed text-zinc-400">
           {rejected
             ? 'Tu perfil no fue aprobado. Si crees que es un error, escribe a soporte con tu correo de registro.'
-            : 'Tu solicitud se ha enviado. Espera hasta 24 horas y te avisaremos si aprobamos o no tu perfil. Gracias.'}
+            : `Tu solicitud se ha enviado. Debes estar pendiente a tu correo${
+                email ? ` (${email})` : ''
+              }: ahí te avisaremos si tu perfil fue verificado. Puede tomar hasta 24 horas. Gracias.`}
         </p>
         <p className="mt-4 text-xs text-zinc-500">
           Las modelos deben verificarse antes de aparecer en Explorar y recibir chats.
@@ -51,11 +56,11 @@ export function PendingVerificationPage() {
         <button
           type="button"
           onClick={() => {
-            void handleLogout();
+            void handleAccept();
           }}
-          className="mt-8 w-full rounded-xl border border-vibra-border py-3 text-sm font-medium text-zinc-300 transition hover:border-vibra-pink/40 hover:text-white"
+          className="mt-8 w-full rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
         >
-          Cerrar sesión
+          Aceptar
         </button>
       </div>
     </div>
