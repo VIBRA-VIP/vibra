@@ -1,4 +1,6 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Compass,
   MessageCircle,
@@ -9,6 +11,9 @@ import {
 } from 'lucide-react';
 import { AppVersion, Logo } from '@/components';
 import { logoutRequest } from '@/features/auth';
+import { listConversationsRequest } from '@/features/chat/chat-api';
+import { playChatPing, setUnreadDocumentTitle } from '@/features/chat/chat-notify';
+import { connectChatSocket, disconnectChatSocket } from '@/features/chat/chat-socket';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { useAuthStore } from '@/store';
 import { cn } from '@/utils';
@@ -22,19 +27,84 @@ type NavItem = {
 
 export function AppShell() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const isModel = user?.role === 'MODEL';
+  const myId = user?.id;
+
+  const conversationsQuery = useQuery({
+    queryKey: ['chat', 'conversations', myId],
+    queryFn: listConversationsRequest,
+    enabled: Boolean(myId),
+    refetchInterval: 4000,
+  });
+
+  const unreadTotal = useMemo(
+    () =>
+      (conversationsQuery.data ?? []).reduce(
+        (sum, c) => sum + Math.max(0, c.unreadCount ?? 0),
+        0,
+      ),
+    [conversationsQuery.data],
+  );
+
+  useEffect(() => {
+    const sock = connectChatSocket(accessToken);
+    if (!sock || !myId) return;
+
+    const onMessage = (payload: {
+      conversationId?: string;
+      senderId?: string;
+    }) => {
+      void queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', myId] });
+      if (payload.conversationId) {
+        void queryClient.invalidateQueries({
+          queryKey: ['chat', 'messages', payload.conversationId],
+        });
+      }
+      if (payload.senderId && payload.senderId !== myId) {
+        playChatPing();
+      }
+    };
+
+    sock.on('chat:message', onMessage);
+    return () => {
+      sock.off('chat:message', onMessage);
+    };
+  }, [accessToken, myId, queryClient]);
+
+  useEffect(() => {
+    return () => {
+      disconnectChatSocket();
+    };
+  }, []);
+
+  useEffect(() => {
+    setUnreadDocumentTitle(unreadTotal);
+  }, [unreadTotal]);
+
+  useEffect(() => {
+    const onFocus = () => {
+      void queryClient.invalidateQueries({ queryKey: ['chat', 'conversations', myId] });
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [myId, queryClient]);
+
+  const chatBadge = unreadTotal > 0 ? unreadTotal : undefined;
 
   const nav: NavItem[] = isModel
     ? [
-        { to: '/requests', label: 'Solicitudes', icon: Inbox, badge: 0 },
-        { to: '/chats', label: 'Chats', icon: MessageCircle, badge: 0 },
+        { to: '/requests', label: 'Solicitudes', icon: Inbox },
+        { to: '/chats', label: 'Chats', icon: MessageCircle, badge: chatBadge },
         { to: '/settings', label: 'Ajustes', icon: Settings },
       ]
     : [
         { to: '/explore', label: 'Explorar', icon: Compass },
-        { to: '/chats', label: 'Chats', icon: MessageCircle, badge: 0 },
+        { to: '/chats', label: 'Chats', icon: MessageCircle, badge: chatBadge },
         { to: '/settings', label: 'Ajustes', icon: Settings },
       ];
 
@@ -47,6 +117,8 @@ export function AppShell() {
     } catch {
       // ignore
     }
+    setUnreadDocumentTitle(0);
+    disconnectChatSocket();
     clearAuth();
     navigate('/login', { replace: true });
   }
@@ -55,6 +127,7 @@ export function AppShell() {
   const avatarUrl = user?.profile?.avatarUrl;
   const initial = displayName.charAt(0).toUpperCase();
   const balance = user?.walletBalance ?? 0;
+  const onChats = location.pathname.startsWith('/chats');
 
   return (
     <div className="flex h-dvh overflow-hidden bg-vibra-bg text-white">
@@ -78,7 +151,7 @@ export function AppShell() {
               <span className="flex-1">{item.label}</span>
               {item.badge ? (
                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-vibra-pink px-1.5 text-[11px] font-semibold text-white">
-                  {item.badge}
+                  {item.badge > 99 ? '99+' : item.badge}
                 </span>
               ) : null}
             </NavLink>
@@ -122,9 +195,7 @@ export function AppShell() {
             )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-vibra-pink">
-                {isModel ? 'Modelo' : 'Usuario'}
-              </p>
+              <p className="text-xs text-vibra-pink">{isModel ? 'Modelo' : 'Usuario'}</p>
             </div>
             <button
               type="button"
@@ -155,14 +226,23 @@ export function AppShell() {
                 )
               }
             >
-              <item.icon className="h-5 w-5" />
+              <span className="relative">
+                <item.icon className="h-5 w-5" />
+                {item.badge ? (
+                  <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-vibra-pink px-1 text-[10px] font-bold text-white">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                ) : null}
+              </span>
               {item.label}
-              {item.badge ? (
-                <span className="absolute right-1/4 top-2 h-2 w-2 rounded-full bg-vibra-pink" />
-              ) : null}
             </NavLink>
           ))}
         </nav>
+        {!onChats && unreadTotal > 0 ? (
+          <span className="sr-only" aria-live="polite">
+            Tienes {unreadTotal} mensaje{unreadTotal === 1 ? '' : 's'} sin leer
+          </span>
+        ) : null}
       </div>
     </div>
   );

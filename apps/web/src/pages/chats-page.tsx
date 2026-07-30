@@ -12,7 +12,6 @@ import {
 } from '@/features/chat/chat-api';
 import {
   connectChatSocket,
-  disconnectChatSocket,
   getChatSocket,
 } from '@/features/chat/chat-socket';
 import { purgeLegacySharedChatStorage } from '@/features/chat/local-chat-storage';
@@ -44,7 +43,7 @@ export function ChatsPage() {
   }, []);
 
   useEffect(() => {
-    const sock = connectChatSocket(accessToken);
+    const sock = connectChatSocket(accessToken) ?? getChatSocket();
     if (!sock) return;
 
     const onMessage = (payload: { conversationId?: string }) => {
@@ -78,7 +77,6 @@ export function ChatsPage() {
     return () => {
       sock.off('chat:message', onMessage);
       sock.off('chat:typing', onTyping);
-      disconnectChatSocket();
       if (peerTypingClearRef.current) clearTimeout(peerTypingClearRef.current);
     };
   }, [accessToken, myId, queryClient, activeConversationId]);
@@ -390,6 +388,11 @@ export function ChatsPage() {
                     {c.lastMessage?.content ?? 'Nueva conversación'}
                   </p>
                 </div>
+                {(c.unreadCount ?? 0) > 0 ? (
+                  <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-vibra-pink px-1.5 text-[11px] font-semibold text-white">
+                    {(c.unreadCount ?? 0) > 99 ? '99+' : c.unreadCount}
+                  </span>
+                ) : null}
               </button>
             );
           })}

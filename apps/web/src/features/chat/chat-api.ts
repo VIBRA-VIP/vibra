@@ -22,6 +22,7 @@ export type ChatConversationDto = {
   id: string;
   lastMessageAt: string | null;
   updatedAt: string;
+  unreadCount?: number;
   peer: ChatPeer | null;
   lastMessage: {
     id: string;

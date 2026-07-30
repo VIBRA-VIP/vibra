@@ -33,16 +33,20 @@ export class ChatService {
     }
 
     const conversation = await this.getOrCreateDm(userId, peerUserId);
-    return this.mapConversation(conversation, userId);
+    return this.mapConversation(conversation, userId, 0);
   }
 
   async listConversations(userId: string) {
     const memberships = await this.prisma.conversationMember.findMany({
       where: { userId },
-      select: { conversationId: true },
+      select: { conversationId: true, lastReadAt: true },
     });
     const ids = memberships.map((m) => m.conversationId);
     if (!ids.length) return [];
+
+    const lastReadByConversation = new Map(
+      memberships.map((m) => [m.conversationId, m.lastReadAt] as const),
+    );
 
     const conversations = await this.prisma.conversation.findMany({
       where: { id: { in: ids } },
@@ -58,7 +62,24 @@ export class ChatService {
       orderBy: [{ lastMessageAt: 'desc' }, { updatedAt: 'desc' }],
     });
 
-    return conversations.map((c) => this.mapConversation(c, userId));
+    const unreadEntries = await Promise.all(
+      conversations.map(async (c) => {
+        const lastReadAt = lastReadByConversation.get(c.id) ?? null;
+        const unreadCount = await this.prisma.message.count({
+          where: {
+            conversationId: c.id,
+            senderId: { not: userId },
+            ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
+          },
+        });
+        return [c.id, unreadCount] as const;
+      }),
+    );
+    const unreadById = new Map(unreadEntries);
+
+    return conversations.map((c) =>
+      this.mapConversation(c, userId, unreadById.get(c.id) ?? 0),
+    );
   }
 
   async listMessages(userId: string, conversationId: string) {
@@ -219,6 +240,7 @@ export class ChatService {
       }>;
     },
     viewerId: string,
+    unreadCount = 0,
   ) {
     const peerMember = conversation.members.find((m) => m.userId !== viewerId);
     const peerProfile = peerMember?.user.profile;
@@ -228,6 +250,7 @@ export class ChatService {
       id: conversation.id,
       lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
       updatedAt: conversation.updatedAt.toISOString(),
+      unreadCount,
       peer: peerMember
         ? {
             userId: peerMember.userId,
