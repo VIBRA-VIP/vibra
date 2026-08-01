@@ -24,12 +24,29 @@ body,
   min-height: 100%;
 }
 
+html {
+  /* App-like: no pinch / double-tap zoom on mobile & tablet */
+  touch-action: manipulation;
+  -ms-touch-action: manipulation;
+}
+
 body {
   margin: 0;
   background: var(--vibra-bg, #0a0a0a);
   color: var(--vibra-text, #fafafa);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+/* iOS zooms focused inputs under 16px — keep form fields readable without zoom */
+@media (max-width: 1024px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 h1,

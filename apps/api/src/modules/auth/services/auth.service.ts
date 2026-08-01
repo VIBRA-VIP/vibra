@@ -177,25 +177,40 @@ export class AuthService {
 
   private async issueTokens(userId: string, email: string, role: UserRole) {
     const expiresIn = this.config.get('JWT_ACCESS_EXPIRES_IN', { infer: true });
+    const refreshExpiresIn = this.config.get('JWT_REFRESH_EXPIRES_IN', { infer: true });
     const accessToken = await this.jwt.signAsync(
       { sub: userId, email, role },
       {
         secret: this.config.get('JWT_ACCESS_SECRET', { infer: true }),
-        expiresIn: expiresIn as '15m',
+        expiresIn: expiresIn as `${number}d`,
       },
     );
 
     const refreshToken = randomBytes(48).toString('hex');
-    const refreshDays = 7;
     await this.prisma.session.create({
       data: {
         userId,
         refreshTokenHash: this.hashToken(refreshToken),
-        expiresAt: new Date(Date.now() + refreshDays * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + this.parseDurationMs(refreshExpiresIn)),
       },
     });
 
     return { accessToken, refreshToken };
+  }
+
+  /** Supports values like `15m`, `7d`, `30d`. Falls back to 30 days. */
+  private parseDurationMs(value: string) {
+    const match = /^(\d+)([smhd])$/i.exec(value.trim());
+    if (!match) return 30 * 24 * 60 * 60 * 1000;
+    const amount = Number(match[1]);
+    const unit = match[2].toLowerCase();
+    const multipliers: Record<string, number> = {
+      s: 1000,
+      m: 60 * 1000,
+      h: 60 * 60 * 1000,
+      d: 24 * 60 * 60 * 1000,
+    };
+    return amount * (multipliers[unit] ?? multipliers.d);
   }
 
   private hashToken(token: string) {

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Logo } from '@/components';
+import { Logo, PasswordField } from '@/components';
 import {
   adminUnlockRequest,
   approveModelRequest,
@@ -73,15 +73,14 @@ export function AdminPage() {
           <Logo className="mb-8 justify-center" />
           <h1 className="font-display text-center text-2xl font-bold">Administración</h1>
           <form className="mt-8 space-y-4" onSubmit={onUnlock}>
-            <input
-              type="password"
+            <PasswordField
               required
               minLength={8}
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="Clave de administrador"
-              className={inputClass}
               autoComplete="current-password"
+              inputClassName={inputClass}
             />
             {error ? <p className="text-sm text-red-400">{error}</p> : null}
             <button

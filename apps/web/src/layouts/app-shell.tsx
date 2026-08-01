@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,7 +12,11 @@ import {
 import { AppVersion, Logo } from '@/components';
 import { logoutRequest } from '@/features/auth';
 import { listConversationsRequest } from '@/features/chat/chat-api';
-import { playChatPing, setUnreadDocumentTitle } from '@/features/chat/chat-notify';
+import {
+  playChatPing,
+  setUnreadDocumentTitle,
+  unlockChatAudio,
+} from '@/features/chat/chat-notify';
 import { connectChatSocket, disconnectChatSocket } from '@/features/chat/chat-socket';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { useAuthStore } from '@/store';
@@ -50,6 +54,17 @@ export function AppShell() {
       ),
     [conversationsQuery.data],
   );
+  const prevUnreadRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const unlock = () => unlockChatAudio();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
 
   useEffect(() => {
     const sock = connectChatSocket(accessToken);
@@ -84,6 +99,14 @@ export function AppShell() {
 
   useEffect(() => {
     setUnreadDocumentTitle(unreadTotal);
+    if (prevUnreadRef.current === null) {
+      prevUnreadRef.current = unreadTotal;
+      return;
+    }
+    if (unreadTotal > prevUnreadRef.current) {
+      playChatPing();
+    }
+    prevUnreadRef.current = unreadTotal;
   }, [unreadTotal]);
 
   useEffect(() => {

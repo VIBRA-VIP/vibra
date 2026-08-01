@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Logo } from '@/components';
+import { Logo, PasswordField } from '@/components';
 import { loginRequest, registerRequest } from '@/features/auth';
 import { useAuthStore } from '@/store';
 
@@ -84,14 +84,14 @@ export function LoginPage() {
           placeholder="Correo electrónico"
           className={inputClass}
         />
-        <input
-          type="password"
+        <PasswordField
           required
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Contraseña"
-          className={inputClass}
+          autoComplete="current-password"
+          inputClassName={inputClass}
         />
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
         <button
@@ -223,14 +223,14 @@ export function RegisterPage() {
           placeholder="Correo electrónico"
           className={inputClass}
         />
-        <input
-          type="password"
+        <PasswordField
           required
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Contraseña (mín. 8)"
-          className={inputClass}
+          autoComplete="new-password"
+          inputClassName={inputClass}
         />
 
         <input
