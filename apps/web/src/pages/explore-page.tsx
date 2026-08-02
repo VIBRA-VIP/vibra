@@ -27,9 +27,9 @@ export function ExplorePage() {
         <p className="mt-1 text-sm text-zinc-400">Publicaciones de las modelos</p>
       </div>
 
-      <div className="max-w-lg space-y-4">
+      <div className="mx-auto max-w-lg space-y-4">
         {feedQuery.isLoading ? (
-          <p className="text-sm text-zinc-500">Cargando...</p>
+          <p className="text-center text-sm text-zinc-500">Cargando...</p>
         ) : (feedQuery.data ?? []).length > 0 ? (
           (feedQuery.data ?? []).map((post) => (
             <PostCard

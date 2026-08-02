@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Heart, MessageCircle, Video } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Heart, MessageCircle, Video } from 'lucide-react';
 import { formatAttrValue } from '@vibra/shared';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { PostCard, PostCommentsSheet, fetchPostsByAuthor } from '@/features/posts';
@@ -124,175 +124,260 @@ export function ProfilePage() {
     );
   }
 
+  const initial = model.displayName.charAt(0).toUpperCase();
+
   return (
-    <div className="mx-auto w-full max-w-6xl text-left">
-      <div className="relative aspect-[4/5] max-h-[70vh] overflow-hidden bg-zinc-800 sm:aspect-[16/9] sm:max-h-[420px] sm:rounded-b-2xl">
+    <div className="relative mx-auto w-full max-w-6xl pb-28 text-left">
+      {/* Hero */}
+      <div className="relative h-[42vh] min-h-[280px] max-h-[480px] overflow-hidden sm:h-[48vh]">
+        {model.avatarUrl ? (
+          <img
+            src={mediaSrc(model.avatarUrl)}
+            alt=""
+            className="absolute inset-0 h-full w-full scale-105 object-cover blur-2xl brightness-50"
+            aria-hidden
+          />
+        ) : null}
+        <div
+          className={cn(
+            'absolute inset-0 bg-gradient-to-br opacity-80',
+            model.gender === 'MALE'
+              ? 'from-zinc-900 via-sky-950/40 to-black'
+              : 'from-zinc-900 via-rose-950/50 to-black',
+          )}
+        />
         {model.avatarUrl ? (
           <img
             src={mediaSrc(model.avatarUrl)}
             alt={model.displayName}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover object-top opacity-90 mix-blend-normal"
           />
-        ) : (
-          <div
-            className={`absolute inset-0 bg-gradient-to-br ${
-              model.gender === 'MALE'
-                ? 'from-sky-800 via-zinc-800 to-zinc-950'
-                : 'from-rose-800 via-zinc-800 to-zinc-950'
-            }`}
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-vibra-bg via-transparent to-transparent" />
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/55 to-transparent" />
+
         <Link
           to="/conocer"
-          className="absolute left-4 top-4 rounded-full bg-black/50 p-2 backdrop-blur"
+          className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md transition hover:bg-black/65"
           aria-label="Volver"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <span
+
+        <div
           className={cn(
-            'absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium backdrop-blur',
-            model.isOnline ? 'bg-black/50 text-white' : 'bg-black/50 text-zinc-300',
+            'absolute right-4 top-4 z-10 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur-md',
+            model.isOnline
+              ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30'
+              : 'bg-black/45 text-zinc-300 ring-1 ring-white/10',
           )}
         >
           <span
             className={cn(
-              'h-1.5 w-1.5 rounded-full',
-              model.isOnline ? 'bg-vibra-online' : 'bg-zinc-500',
+              'h-2 w-2 rounded-full',
+              model.isOnline ? 'bg-vibra-online shadow-[0_0_8px_#22c55e]' : 'bg-zinc-500',
             )}
           />
           {model.isOnline ? 'En línea' : 'Offline'}
-        </span>
+        </div>
       </div>
 
-      <div className="space-y-6 px-4 py-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl font-bold md:text-3xl">
-              {model.displayName}{' '}
-              {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
-            </h1>
-            <p className="mt-1 text-sm text-zinc-400">
-              {model.age ? `${model.age} años · ` : ''}@{model.username}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={favoriteMutation.isPending}
-              onClick={() => favoriteMutation.mutate()}
-              className={cn(
-                'rounded-xl border p-3 transition disabled:opacity-60',
-                model.isFavorited
-                  ? 'border-vibra-pink bg-vibra-pink/20 text-vibra-pink'
-                  : 'border-vibra-border text-zinc-300',
-              )}
-              aria-label="Seguir"
-            >
-              <Heart className={cn('h-5 w-5', model.isFavorited && 'fill-current')} />
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-xl bg-vibra-pink px-4 py-3 text-sm font-semibold"
-            >
-              <Video className="h-4 w-4" />
-              Video llamada
-            </button>
-          </div>
-        </div>
+      {/* Identity card overlapping hero */}
+      <div className="relative z-10 -mt-20 px-4 sm:-mt-24">
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121212]/90 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+          <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:p-6">
+            <div className="relative -mt-14 shrink-0 self-start sm:-mt-16">
+              <div className="rounded-full bg-gradient-to-br from-vibra-pink to-rose-700 p-[3px] shadow-lg shadow-vibra-pink/25">
+                {model.avatarUrl ? (
+                  <img
+                    src={mediaSrc(model.avatarUrl)}
+                    alt={model.displayName}
+                    className="h-24 w-24 rounded-full object-cover ring-4 ring-[#121212] sm:h-28 sm:w-28"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-zinc-800 text-3xl font-semibold ring-4 ring-[#121212] sm:h-28 sm:w-28">
+                    {initial}
+                  </div>
+                )}
+              </div>
+            </div>
 
-        {model.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {model.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border border-vibra-border bg-vibra-muted px-3 py-1 text-xs text-zinc-300"
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                  {model.displayName}
+                </h1>
+                {model.isVerified ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-vibra-pink/15 px-2 py-0.5 text-xs font-semibold text-vibra-pink">
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                    Verificada
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-sm text-zinc-400">
+                @{model.username}
+                {model.age ? ` · ${model.age} años` : ''}
+              </p>
+            </div>
+
+            <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
+              <button
+                type="button"
+                disabled={favoriteMutation.isPending}
+                onClick={() => favoriteMutation.mutate()}
+                className={cn(
+                  'inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border text-sm font-semibold transition disabled:opacity-60 sm:flex-none sm:px-4',
+                  model.isFavorited
+                    ? 'border-vibra-pink/50 bg-vibra-pink/15 text-vibra-pink'
+                    : 'border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10',
+                )}
               >
-                {tag}
-              </span>
-            ))}
+                <Heart className={cn('h-4 w-4', model.isFavorited && 'fill-current')} />
+                {model.isFavorited ? 'Siguiendo' : 'Seguir'}
+              </button>
+              <button
+                type="button"
+                onClick={startChat}
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-vibra-pink px-4 text-sm font-semibold text-white transition hover:bg-vibra-pink-hover sm:flex-none"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Mensaje
+              </button>
+            </div>
           </div>
-        ) : null}
 
+          {model.tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2 border-t border-white/5 px-5 py-4 sm:px-6">
+              {model.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium text-zinc-300 ring-1 ring-white/10"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-6 px-4">
         {model.bio ? (
-          <section>
-            <h2 className="font-display text-lg font-semibold">Sobre mí</h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{model.bio}</p>
+          <section className="rounded-3xl border border-white/10 bg-vibra-elevated/80 p-5">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              Sobre mí
+            </h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-zinc-300">{model.bio}</p>
           </section>
         ) : null}
 
         {attrs.length > 0 ? (
           <section>
-            <h2 className="font-display text-lg font-semibold">Detalles</h2>
-            <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              Detalles
+            </h2>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {attrs.map((item) => (
                 <div
                   key={item.key}
-                  className="rounded-xl border border-vibra-border bg-vibra-elevated px-3 py-2"
+                  className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent px-3.5 py-3"
                 >
-                  <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{item.label}</dt>
-                  <dd className="mt-0.5 text-sm text-zinc-200">{item.value}</dd>
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">{item.label}</p>
+                  <p className="mt-1 text-sm font-medium text-zinc-100">{item.value}</p>
                 </div>
               ))}
-            </dl>
+            </div>
           </section>
         ) : null}
 
         <section>
-          <h2 className="font-display text-lg font-semibold">Servicios</h2>
-          <ul className="mt-3 space-y-2">
-            <li className="flex items-center justify-between rounded-xl border border-vibra-border bg-vibra-elevated px-4 py-3 text-sm">
-              <span>Videollamada</span>
-              <span className="text-zinc-400">{model.videoPricePerMin} créd/min</span>
-            </li>
-            <li className="flex items-center justify-between rounded-xl border border-vibra-border bg-vibra-elevated px-4 py-3 text-sm">
-              <span>Contenido exclusivo</span>
-              <span className="text-zinc-400">{model.contentPrice ?? 100} créditos</span>
-            </li>
+          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+            Precios
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="flex items-center justify-between rounded-2xl border border-vibra-pink/25 bg-vibra-pink/10 px-4 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-vibra-pink/20 text-vibra-pink">
+                  <Video className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">Videollamada</p>
+                  <p className="text-xs text-zinc-400">Por minuto</p>
+                </div>
+              </div>
+              <p className="font-display text-lg font-bold text-vibra-gold">
+                {model.videoPricePerMin}
+                <span className="ml-1 text-xs font-medium text-zinc-400">créd</span>
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-vibra-elevated px-4 py-4">
+              <div>
+                <p className="text-sm font-semibold">Contenido exclusivo</p>
+                <p className="text-xs text-zinc-400">Foto, video o pack</p>
+              </div>
+              <p className="font-display text-lg font-bold text-white">
+                {model.contentPrice ?? 100}
+                <span className="ml-1 text-xs font-medium text-zinc-400">créd</span>
+              </p>
+            </div>
             {model.services.map((service) => (
-              <li
+              <div
                 key={service.name}
-                className="flex items-center justify-between rounded-xl border border-vibra-border bg-vibra-elevated px-4 py-3 text-sm"
+                className="flex items-center justify-between rounded-2xl border border-white/10 bg-vibra-elevated px-4 py-3.5 sm:col-span-2"
               >
-                <span>{service.name}</span>
-                <span className="text-zinc-400">
+                <span className="text-sm">{service.name}</span>
+                <span className="text-sm text-zinc-400">
                   {service.price} {service.unit ?? 'créditos'}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
 
-        <button
-          type="button"
-          onClick={startChat}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold"
-        >
-          <MessageCircle className="h-4 w-4" />
-          Enviar mensaje
-        </button>
+        <section className="pb-4">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              Publicaciones
+            </h2>
+            {(postsQuery.data ?? []).length > 0 ? (
+              <span className="text-xs text-zinc-500">{postsQuery.data!.length} posts</span>
+            ) : null}
+          </div>
 
-        <section className="space-y-3 border-t border-vibra-border pt-6">
-          <h2 className="font-display text-lg font-semibold">Publicaciones</h2>
           {postsQuery.isLoading ? (
             <p className="text-sm text-zinc-500">Cargando...</p>
           ) : (postsQuery.data ?? []).length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-vibra-border px-4 py-8 text-center text-sm text-zinc-500">
-              Esta modelo aún no tiene publicaciones.
-            </p>
+            <div className="rounded-3xl border border-dashed border-white/10 px-4 py-12 text-center">
+              <p className="text-sm text-zinc-500">Aún no hay publicaciones</p>
+            </div>
           ) : (
             <div className="mx-auto max-w-lg space-y-4">
               {(postsQuery.data ?? []).map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onOpenComments={setCommentsPostId}
-                />
+                <PostCard key={post.id} post={post} onOpenComments={setCommentsPostId} />
               ))}
             </div>
           )}
         </section>
+      </div>
+
+      {/* Sticky actions */}
+      <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:bottom-4">
+        <div className="mx-auto flex max-w-lg gap-2 rounded-2xl border border-white/10 bg-[#121212]/92 p-2 shadow-2xl backdrop-blur-xl">
+          <button
+            type="button"
+            onClick={startChat}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Chat
+          </button>
+          <button
+            type="button"
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-vibra-pink/40 bg-vibra-pink/10 py-3 text-sm font-semibold text-vibra-pink"
+          >
+            <Video className="h-4 w-4" />
+            Video
+          </button>
+        </div>
       </div>
 
       {commentsPostId ? (
