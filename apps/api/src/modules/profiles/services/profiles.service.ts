@@ -283,7 +283,18 @@ export class ProfilesService {
 
   async listModels(
     viewerId: string | undefined,
-    params: { gender?: string; filter?: string; q?: string },
+    params: {
+      gender?: string;
+      filter?: string;
+      q?: string;
+      tag?: string;
+      breastSize?: string;
+      buttType?: string;
+      bodyBuild?: string;
+      penisSize?: string;
+      skinTone?: string;
+      hair?: string;
+    },
   ) {
     const where: Record<string, unknown> = {
       user: { role: UserRole.MODEL, isActive: true },
@@ -300,6 +311,29 @@ export class ProfilesService {
     }
     if (params.filter === 'available') {
       where.isAvailable = true;
+    }
+
+    if (params.tag?.trim()) {
+      where.tags = { has: params.tag.trim().toLowerCase() };
+    }
+
+    const attrFilters: Array<Record<string, unknown>> = [];
+    const pushAttr = (path: string, value?: string) => {
+      const v = value?.trim();
+      if (!v) return;
+      attrFilters.push({ path: [path], equals: v });
+    };
+    pushAttr('breastSize', params.breastSize);
+    pushAttr('buttType', params.buttType);
+    pushAttr('bodyBuild', params.bodyBuild);
+    pushAttr('penisSize', params.penisSize);
+    pushAttr('skinTone', params.skinTone);
+    pushAttr('hair', params.hair);
+
+    if (attrFilters.length === 1) {
+      where.attributes = attrFilters[0];
+    } else if (attrFilters.length > 1) {
+      where.AND = attrFilters.map((f) => ({ attributes: f }));
     }
 
     if (params.q?.trim()) {

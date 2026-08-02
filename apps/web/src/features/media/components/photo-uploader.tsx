@@ -13,6 +13,8 @@ type Props = {
   max?: number;
   type?: UploadMediaType;
   label?: string;
+  /** Centered circular avatar picker (for client profile photo). */
+  variant?: 'grid' | 'avatar';
 };
 
 export function PhotoUploader({
@@ -21,6 +23,7 @@ export function PhotoUploader({
   max = 1,
   type = 'GALLERY',
   label = 'Subir fotos',
+  variant = 'grid',
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
@@ -53,8 +56,14 @@ export function PhotoUploader({
       setBusyIndex(next.length);
       try {
         const result = await uploadMediaFile(file, type);
-        next.push(result.url);
-        onChange([...next]);
+        if (variant === 'avatar' || max === 1) {
+          onChange([result.url]);
+          next.length = 0;
+          next.push(result.url);
+        } else {
+          next.push(result.url);
+          onChange([...next]);
+        }
       } catch (err: unknown) {
         const message =
           (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
@@ -74,6 +83,60 @@ export function PhotoUploader({
 
   function removeAt(index: number) {
     onChange(photos.filter((_, i) => i !== index));
+  }
+
+  if (variant === 'avatar') {
+    const url = photos[0];
+    const busy = busyIndex !== null;
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+          className="group relative h-28 w-28 overflow-hidden rounded-full border-2 border-vibra-border bg-vibra-muted transition hover:border-vibra-pink/60 disabled:opacity-60"
+          aria-label={label}
+        >
+          {url ? (
+            <img src={mediaSrc(url)} alt="Foto de perfil" className="h-full w-full object-cover" />
+          ) : (
+            <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-zinc-400">
+              <span className="text-2xl leading-none">+</span>
+              <span className="px-2 text-center text-[10px]">{label}</span>
+            </span>
+          )}
+          {busy ? (
+            <span className="absolute inset-0 grid place-items-center bg-black/55 text-xs text-white">
+              Subiendo...
+            </span>
+          ) : url ? (
+            <span className="absolute inset-x-0 bottom-0 bg-black/55 py-1 text-center text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+              Cambiar
+            </span>
+          ) : null}
+        </button>
+        {url ? (
+          <button
+            type="button"
+            onClick={() => removeAt(0)}
+            className="text-xs text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
+          >
+            Quitar foto
+          </button>
+        ) : null}
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={onInputChange}
+        />
+        {error ? <p className="text-sm text-red-400">{error}</p> : null}
+        <p className="text-center text-xs text-zinc-500">
+          JPG, PNG, WEBP o GIF · máx. 8 MB
+        </p>
+      </div>
+    );
   }
 
   return (

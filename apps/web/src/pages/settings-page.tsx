@@ -88,7 +88,7 @@ export function SettingsPage() {
     setMessage(null);
     try {
       await updateSettingsRequest({
-        displayName,
+        displayName: isModel ? displayName : undefined,
         bio,
         avatarUrl: avatarUrl || undefined,
         galleryUrls: isModel ? galleryUrls : undefined,
@@ -162,34 +162,37 @@ export function SettingsPage() {
         onSubmit={saveProfile}
       >
         <h2 className="font-display text-lg font-semibold">Perfil</h2>
-        <input
-          className={inputClass}
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="Nombre visible"
-        />
         {isModel ? (
-          <div className="space-y-2">
-            <p className="text-sm text-zinc-400">Galería (hasta 8 fotos)</p>
-            <PhotoUploader
-              photos={galleryUrls}
-              onChange={(urls) => {
-                setGalleryUrls(urls);
-                setAvatarUrl(urls[0] ?? '');
-              }}
-              max={8}
-              type="GALLERY"
-              label="Agregar foto"
+          <>
+            <input
+              className={inputClass}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Nombre visible"
             />
-          </div>
+            <div className="space-y-2">
+              <p className="text-sm text-zinc-400">Galería (hasta 8 fotos)</p>
+              <PhotoUploader
+                photos={galleryUrls}
+                onChange={(urls) => {
+                  setGalleryUrls(urls);
+                  setAvatarUrl(urls[0] ?? '');
+                }}
+                max={8}
+                type="GALLERY"
+                label="Agregar foto"
+              />
+            </div>
+          </>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-zinc-400">Foto de perfil</p>
+            <p className="text-center text-sm text-zinc-400">Foto de perfil</p>
             <PhotoUploader
               photos={avatarUrl ? [avatarUrl] : []}
               onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
               max={1}
               type="AVATAR"
+              variant="avatar"
               label="Elegir foto"
             />
           </div>

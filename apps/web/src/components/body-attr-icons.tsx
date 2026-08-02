@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { cn } from '@/utils';
 
 type IconProps = {
@@ -38,164 +39,288 @@ export function attrLevel(optionId: string): 1 | 2 | 3 | 4 {
   return 2;
 }
 
-/** Stylized breasts silhouette — scales with level */
+/** Realistic breasts — teardrop form, cleavage, clear size steps */
 export function BreastIcon({ className, level = 2 }: IconProps) {
-  const r = 3.2 + level * 1.35;
-  const cy = 11.5 + (4 - level) * 0.4;
-  const gap = 1.1 + level * 0.15;
-  return (
-    <svg viewBox="0 0 24 24" className={cn('h-6 w-6', className)} aria-hidden>
-      <path
-        d={`M12 ${20 - level * 0.3} C ${10 - level * 0.4} ${16.5 - level * 0.2} 4 15 4 10.5 C 4 7.2 6.5 5 9.2 5.4 C 10.4 5.6 11.2 6.4 12 7.4 C 12.8 6.4 13.6 5.6 14.8 5.4 C 17.5 5 20 7.2 20 10.5 C 20 15 14 ${16.5 - level * 0.2} 12 ${20 - level * 0.3} Z`}
-        fill="currentColor"
-        opacity={0.18}
-      />
-      <circle cx={12 - r - gap / 2} cy={cy} r={r} fill="currentColor" opacity={0.92} />
-      <circle cx={12 + r + gap / 2} cy={cy} r={r} fill="currentColor" opacity={0.92} />
-      <circle
-        cx={12 - r - gap / 2 + r * 0.15}
-        cy={cy - r * 0.15}
-        r={r * 0.28}
-        fill="currentColor"
-        opacity={0.35}
-      />
-      <circle
-        cx={12 + r + gap / 2 + r * 0.15}
-        cy={cy - r * 0.15}
-        r={r * 0.28}
-        fill="currentColor"
-        opacity={0.35}
-      />
-    </svg>
-  );
-}
-
-/** Stylized buttocks silhouette */
-export function ButtIcon({ className, level = 2 }: IconProps) {
-  const scale = 0.72 + level * 0.1;
-  return (
-    <svg viewBox="0 0 24 24" className={cn('h-6 w-6', className)} aria-hidden>
-      <g transform={`translate(12 13) scale(${scale}) translate(-12 -13)`}>
-        <path
-          d="M5.5 8.5 C5.5 5.5 8 3.5 12 3.5 C16 3.5 18.5 5.5 18.5 8.5 C18.5 10.2 17.8 11.5 16.8 12.8 C18.6 14.2 19.8 16.2 19.5 18.5 C19.1 21.2 16.2 22.5 12 22.5 C7.8 22.5 4.9 21.2 4.5 18.5 C4.2 16.2 5.4 14.2 7.2 12.8 C6.2 11.5 5.5 10.2 5.5 8.5 Z"
-          fill="currentColor"
-          opacity={0.22}
-        />
-        <path
-          d="M12 7.5 C9.2 7.5 7 9.6 7 12.5 C7 15.8 9 18.2 12 20.2 C15 18.2 17 15.8 17 12.5 C17 9.6 14.8 7.5 12 7.5 Z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.2"
-          opacity={0.35}
-        />
-        <ellipse cx="8.6" cy="14.2" rx={2.4 + level * 0.35} ry={3.1 + level * 0.4} fill="currentColor" />
-        <ellipse cx="15.4" cy="14.2" rx={2.4 + level * 0.35} ry={3.1 + level * 0.4} fill="currentColor" />
-        <path
-          d="M12 10.5 V19.5"
-          stroke="currentColor"
-          strokeWidth="1.1"
-          strokeLinecap="round"
-          opacity={0.45}
-        />
-      </g>
-    </svg>
-  );
-}
-
-/** Elegant phallus silhouette — clear small → medium → large → XL form */
-export function PenisIcon({ className, level = 2 }: IconProps) {
-  // Distinct silhouettes per size (viewBox 24×24, base at bottom)
-  const paths: Record<1 | 2 | 3 | 4, string> = {
-    // Pequeño — corto y fino
-    1: `
-      M 8.2 20.8
-      C 8.2 18.6 9.4 17.4 11.2 17.2
-      L 11.2 11.8
-      C 11.2 10.2 10.9 9.2 11.15 8.35
-      C 11.35 7.7 11.7 7.35 12 7.35
-      C 12.3 7.35 12.65 7.7 12.85 8.35
-      C 13.1 9.2 12.8 10.2 12.8 11.8
-      L 12.8 17.2
-      C 14.6 17.4 15.8 18.6 15.8 20.8
-      C 15.8 22.2 14.4 22.8 12 22.8
-      C 9.6 22.8 8.2 22.2 8.2 20.8
-      Z
-    `,
-    // Mediano
-    2: `
-      M 7.2 20.6
-      C 7.2 18.1 8.7 16.7 10.8 16.45
-      L 10.8 9.4
-      C 10.8 7.5 10.45 6.2 10.85 5.15
-      C 11.15 4.35 11.55 4 12 4
-      C 12.45 4 12.85 4.35 13.15 5.15
-      C 13.55 6.2 13.2 7.5 13.2 9.4
-      L 13.2 16.45
-      C 15.3 16.7 16.8 18.1 16.8 20.6
-      C 16.8 22.35 15 23.1 12 23.1
-      C 9 23.1 7.2 22.35 7.2 20.6
-      Z
-    `,
-    // Grande — más largo y grueso
-    3: `
-      M 6.2 20.4
-      C 6.2 17.5 8.1 15.85 10.4 15.55
-      L 10.4 7.2
-      C 10.4 5.1 9.95 3.55 10.5 2.35
-      C 10.9 1.45 11.4 1.05 12 1.05
-      C 12.6 1.05 13.1 1.45 13.5 2.35
-      C 14.05 3.55 13.6 5.1 13.6 7.2
-      L 13.6 15.55
-      C 15.9 15.85 17.8 17.5 17.8 20.4
-      C 17.8 22.5 15.5 23.35 12 23.35
-      C 8.5 23.35 6.2 22.5 6.2 20.4
-      Z
-    `,
-    // Extra grande
-    4: `
-      M 5.4 20.2
-      C 5.4 16.9 7.6 15.1 10.1 14.75
-      L 10.1 5.6
-      C 10.1 3.2 9.55 1.55 10.25 0.55
-      C 10.7 -0.1 11.3 -0.25 12 -0.25
-      C 12.7 -0.25 13.3 -0.1 13.75 0.55
-      C 14.45 1.55 13.9 3.2 13.9 5.6
-      L 13.9 14.75
-      C 16.4 15.1 18.6 16.9 18.6 20.2
-      C 18.6 22.7 15.8 23.6 12 23.6
-      C 8.2 23.6 5.4 22.7 5.4 20.2
-      Z
-    `,
+  const gid = useId().replace(/:/g, '');
+  // Per-level anatomy (cx offset, radius X/Y, nipple scale, hang)
+  const specs: Record<
+    1 | 2 | 3 | 4,
+    { rx: number; ry: number; ox: number; cy: number; nip: number; cleft: number }
+  > = {
+    1: { rx: 3.2, ry: 3.6, ox: 4.2, cy: 12.2, nip: 0.55, cleft: 0.8 },
+    2: { rx: 4.4, ry: 5.0, ox: 5.1, cy: 12.0, nip: 0.72, cleft: 0.55 },
+    3: { rx: 5.6, ry: 6.4, ox: 5.9, cy: 11.6, nip: 0.9, cleft: 0.25 },
+    4: { rx: 6.8, ry: 7.6, ox: 6.6, cy: 11.2, nip: 1.05, cleft: 0 },
   };
+  const s = specs[level];
+  const leftCx = 12 - s.ox;
+  const rightCx = 12 + s.ox;
+
+  // Soft chest plate behind
+  const plateTop = s.cy - s.ry - 1.2;
+  const plateBot = s.cy + s.ry + 1.5;
 
   return (
     <svg viewBox="0 0 24 24" className={cn('h-6 w-6', className)} aria-hidden>
-      {/* Soft glow underlay */}
-      <path d={paths[level]} fill="currentColor" opacity={0.2} transform="translate(0 0.4)" />
-      <path d={paths[level]} fill="currentColor" />
-      {/* Glans highlight — reads as tip */}
+      <defs>
+        <radialGradient id={`breastShine-${gid}`} cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.35" />
+          <stop offset="55%" stopColor="currentColor" stopOpacity="1" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.85" />
+        </radialGradient>
+      </defs>
+
+      {/* Upper torso hint */}
+      <path
+        d={`M ${4.5 + (4 - level) * 0.4} ${plateTop + 2}
+            C 8 ${plateTop - 0.5} 16 ${plateTop - 0.5} ${19.5 - (4 - level) * 0.4} ${plateTop + 2}
+            L ${20 - level * 0.15} ${plateBot}
+            C 16 ${plateBot + 1.2} 8 ${plateBot + 1.2} ${4 + level * 0.15} ${plateBot}
+            Z`}
+        fill="currentColor"
+        opacity={0.14}
+      />
+
+      {/* Left breast — teardrop */}
       <ellipse
-        cx="12"
-        cy={level === 1 ? 8.1 : level === 2 ? 5.2 : level === 3 ? 2.6 : 1.2}
-        rx={level === 1 ? 0.85 : level === 2 ? 1.05 : level === 3 ? 1.25 : 1.4}
-        ry={level === 1 ? 0.7 : level === 2 ? 0.85 : level === 3 ? 1 : 1.15}
+        cx={leftCx}
+        cy={s.cy}
+        rx={s.rx}
+        ry={s.ry}
+        fill={`url(#breastShine-${gid})`}
+      />
+      {/* Right breast */}
+      <ellipse
+        cx={rightCx}
+        cy={s.cy}
+        rx={s.rx}
+        ry={s.ry}
+        fill={`url(#breastShine-${gid})`}
+      />
+
+      {/* Cleavage shadow */}
+      <path
+        d={`M 12 ${s.cy - s.ry * 0.55 + s.cleft}
+            C ${12 - 0.8} ${s.cy - s.ry * 0.1} ${12 - 0.9} ${s.cy + s.ry * 0.45} 12 ${s.cy + s.ry * 0.75}
+            C ${12 + 0.9} ${s.cy + s.ry * 0.45} ${12 + 0.8} ${s.cy - s.ry * 0.1} 12 ${s.cy - s.ry * 0.55 + s.cleft}
+            Z`}
         fill="currentColor"
         opacity={0.28}
       />
-      {/* Mid shaft contour for elegance */}
+
+      {/* Areola + nipple left */}
+      <ellipse
+        cx={leftCx + s.rx * 0.08}
+        cy={s.cy + s.ry * 0.12}
+        rx={s.nip * 1.55}
+        ry={s.nip * 1.35}
+        fill="currentColor"
+        opacity={0.32}
+      />
+      <circle
+        cx={leftCx + s.rx * 0.1}
+        cy={s.cy + s.ry * 0.14}
+        r={s.nip * 0.55}
+        fill="currentColor"
+        opacity={0.55}
+      />
+
+      {/* Areola + nipple right */}
+      <ellipse
+        cx={rightCx + s.rx * 0.08}
+        cy={s.cy + s.ry * 0.12}
+        rx={s.nip * 1.55}
+        ry={s.nip * 1.35}
+        fill="currentColor"
+        opacity={0.32}
+      />
+      <circle
+        cx={rightCx + s.rx * 0.1}
+        cy={s.cy + s.ry * 0.14}
+        r={s.nip * 0.55}
+        fill="currentColor"
+        opacity={0.55}
+      />
+
+      {/* Soft underside shadow for volume */}
+      <ellipse
+        cx={leftCx}
+        cy={s.cy + s.ry * 0.55}
+        rx={s.rx * 0.7}
+        ry={s.ry * 0.22}
+        fill="currentColor"
+        opacity={0.18}
+      />
+      <ellipse
+        cx={rightCx}
+        cy={s.cy + s.ry * 0.55}
+        rx={s.rx * 0.7}
+        ry={s.ry * 0.22}
+        fill="currentColor"
+        opacity={0.18}
+      />
+    </svg>
+  );
+}
+
+/** Realistic buttocks — round cheeks with deep cleft, size scales hard */
+export function ButtIcon({ className, level = 2 }: IconProps) {
+  const specs: Record<1 | 2 | 3 | 4, { rx: number; ry: number; ox: number; cy: number }> = {
+    1: { rx: 3.0, ry: 3.6, ox: 3.5, cy: 13.5 },
+    2: { rx: 4.0, ry: 4.8, ox: 4.2, cy: 13.2 },
+    3: { rx: 5.1, ry: 6.0, ox: 5.0, cy: 12.8 },
+    4: { rx: 6.2, ry: 7.2, ox: 5.7, cy: 12.4 },
+  };
+  const s = specs[level];
+
+  return (
+    <svg viewBox="0 0 24 24" className={cn('h-6 w-6', className)} aria-hidden>
+      {/* Hip / lower back */}
       <path
-        d={
-          level === 1
-            ? 'M 11.35 11.2 C 11.55 13.5 11.55 15.5 11.45 17'
-            : level === 2
-              ? 'M 11.2 8.8 C 11.45 11.5 11.45 14 11.3 16.2'
-              : level === 3
-                ? 'M 11.05 6.5 C 11.35 10 11.35 13 11.2 15.2'
-                : 'M 10.95 5 C 11.3 9 11.3 12.5 11.15 14.5'
-        }
+        d={`M ${12 - s.ox - 1} ${s.cy - s.ry - 2.5}
+            C ${12 - s.ox + 1} ${s.cy - s.ry - 4} ${12 + s.ox - 1} ${s.cy - s.ry - 4} ${12 + s.ox + 1} ${s.cy - s.ry - 2.5}
+            L ${12 + s.ox + 0.5} ${s.cy - s.ry * 0.2}
+            L ${12 - s.ox - 0.5} ${s.cy - s.ry * 0.2}
+            Z`}
+        fill="currentColor"
+        opacity={0.16}
+      />
+
+      <ellipse cx={12 - s.ox} cy={s.cy} rx={s.rx} ry={s.ry} fill="currentColor" />
+      <ellipse cx={12 + s.ox} cy={s.cy} rx={s.rx} ry={s.ry} fill="currentColor" />
+
+      {/* Deep cleft */}
+      <path
+        d={`M 12 ${s.cy - s.ry * 0.85}
+            C ${11.2} ${s.cy - s.ry * 0.2} ${11.15} ${s.cy + s.ry * 0.35} 12 ${s.cy + s.ry * 0.95}
+            C ${12.85} ${s.cy + s.ry * 0.35} ${12.8} ${s.cy - s.ry * 0.2} 12 ${s.cy - s.ry * 0.85}
+            Z`}
+        fill="currentColor"
+        opacity={0.35}
+      />
+
+      {/* Highlight on each cheek */}
+      <ellipse
+        cx={12 - s.ox - s.rx * 0.15}
+        cy={s.cy - s.ry * 0.25}
+        rx={s.rx * 0.35}
+        ry={s.ry * 0.28}
+        fill="currentColor"
+        opacity={0.22}
+      />
+      <ellipse
+        cx={12 + s.ox - s.rx * 0.15}
+        cy={s.cy - s.ry * 0.25}
+        rx={s.rx * 0.35}
+        ry={s.ry * 0.28}
+        fill="currentColor"
+        opacity={0.22}
+      />
+    </svg>
+  );
+}
+
+/** Realistic phallus — glans, corona, shaft, balls; dramatic length/girth */
+export function PenisIcon({ className, level = 2 }: IconProps) {
+  const specs: Record<
+    1 | 2 | 3 | 4,
+    { shaftW: number; glansR: number; ballRx: number; ballRy: number; tipY: number }
+  > = {
+    1: { shaftW: 2.15, glansR: 2.35, ballRx: 2.6, ballRy: 2.2, tipY: 9.2 },
+    2: { shaftW: 2.7, glansR: 2.85, ballRx: 3.2, ballRy: 2.55, tipY: 6.2 },
+    3: { shaftW: 3.35, glansR: 3.35, ballRx: 3.8, ballRy: 2.9, tipY: 3.4 },
+    4: { shaftW: 4.0, glansR: 3.85, ballRx: 4.4, ballRy: 3.25, tipY: 1.0 },
+  };
+  const s = specs[level];
+  const shaftTop = s.tipY + s.glansR * 0.55;
+  const shaftBot = 19.0;
+  const midX = 12;
+
+  // Soft natural curve to the right for erotic silhouette
+  const curve = 0.35 + level * 0.12;
+
+  return (
+    <svg viewBox="0 0 24 24" className={cn('h-6 w-6', className)} aria-hidden>
+      {/* Scrotum */}
+      <ellipse
+        cx={midX - s.ballRx * 0.72}
+        cy={20.4}
+        rx={s.ballRx}
+        ry={s.ballRy}
+        fill="currentColor"
+      />
+      <ellipse
+        cx={midX + s.ballRx * 0.72}
+        cy={20.4}
+        rx={s.ballRx}
+        ry={s.ballRy}
+        fill="currentColor"
+      />
+      <ellipse
+        cx={midX}
+        cy={20.15}
+        rx={s.ballRx * 0.55}
+        ry={s.ballRy * 0.7}
+        fill="currentColor"
+        opacity={0.35}
+      />
+
+      {/* Shaft — slightly curved organic path */}
+      <path
+        d={`
+          M ${midX - s.shaftW} ${shaftBot}
+          C ${midX - s.shaftW - curve * 0.3} ${(shaftBot + shaftTop) / 2}
+            ${midX - s.shaftW + curve} ${shaftTop + 1}
+            ${midX - s.shaftW * 0.92} ${shaftTop}
+          L ${midX + s.shaftW * 0.92} ${shaftTop}
+          C ${midX + s.shaftW + curve} ${shaftTop + 1}
+            ${midX + s.shaftW - curve * 0.3} ${(shaftBot + shaftTop) / 2}
+            ${midX + s.shaftW} ${shaftBot}
+          Z
+        `}
+        fill="currentColor"
+      />
+
+      {/* Glans */}
+      <ellipse
+        cx={midX + curve * 0.4}
+        cy={s.tipY}
+        rx={s.glansR}
+        ry={s.glansR * 0.95}
+        fill="currentColor"
+      />
+
+      {/* Corona ridge */}
+      <ellipse
+        cx={midX + curve * 0.35}
+        cy={s.tipY + s.glansR * 0.55}
+        rx={s.glansR * 1.08}
+        ry={s.glansR * 0.32}
+        fill="currentColor"
+        opacity={0.4}
+      />
+
+      {/* Urethral tip indent */}
+      <ellipse
+        cx={midX + curve * 0.45}
+        cy={s.tipY - s.glansR * 0.35}
+        rx={s.glansR * 0.22}
+        ry={s.glansR * 0.32}
+        fill="currentColor"
+        opacity={0.3}
+      />
+
+      {/* Shaft highlight */}
+      <path
+        d={`
+          M ${midX - s.shaftW * 0.35} ${shaftTop + 0.8}
+          C ${midX - s.shaftW * 0.15} ${(shaftTop + shaftBot) / 2}
+            ${midX - s.shaftW * 0.2} ${shaftBot - 2}
+            ${midX - s.shaftW * 0.25} ${shaftBot - 0.5}
+        `}
         fill="none"
         stroke="currentColor"
-        strokeWidth="0.7"
+        strokeWidth={0.9}
         strokeLinecap="round"
         opacity={0.22}
       />

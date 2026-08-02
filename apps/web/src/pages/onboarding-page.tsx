@@ -77,7 +77,7 @@ function AttrIconPicker({
                 : 'border-vibra-border text-zinc-400 hover:border-vibra-pink/40 hover:text-white',
             )}
           >
-            <BodyAttrIcon kind={kind} optionId={opt.id} className="h-8 w-8" />
+            <BodyAttrIcon kind={kind} optionId={opt.id} className="h-10 w-10" />
             <span className={cn('text-xs font-medium', active ? 'text-white' : undefined)}>
               {opt.label}
             </span>

@@ -59,8 +59,26 @@ export class ProfilesController {
     @Query('gender') gender?: string,
     @Query('filter') filter?: string,
     @Query('q') q?: string,
+    @Query('tag') tag?: string,
+    @Query('breastSize') breastSize?: string,
+    @Query('buttType') buttType?: string,
+    @Query('bodyBuild') bodyBuild?: string,
+    @Query('penisSize') penisSize?: string,
+    @Query('skinTone') skinTone?: string,
+    @Query('hair') hair?: string,
   ) {
-    return this.profilesService.listModels(user.id, { gender, filter, q });
+    return this.profilesService.listModels(user.id, {
+      gender,
+      filter,
+      q,
+      tag,
+      breastSize,
+      buttType,
+      bodyBuild,
+      penisSize,
+      skinTone,
+      hair,
+    });
   }
 
   @UseGuards(JwtAuthGuard)

@@ -23,6 +23,13 @@ export async function fetchModels(params?: {
   gender?: string;
   filter?: string;
   q?: string;
+  tag?: string;
+  breastSize?: string;
+  buttType?: string;
+  bodyBuild?: string;
+  penisSize?: string;
+  skinTone?: string;
+  hair?: string;
 }) {
   const { data } = await api.get<ModelProfile[]>('/api/profiles/models', { params });
   return data;
