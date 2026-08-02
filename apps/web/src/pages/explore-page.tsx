@@ -57,16 +57,8 @@ export function ExplorePage() {
 
       <div className="space-y-4">
         {feedQuery.isLoading ? (
-          <p className="text-sm text-zinc-400">Cargando publicaciones...</p>
-        ) : null}
-        {feedQuery.isError ? (
-          <p className="text-sm text-red-400">No se pudieron cargar las publicaciones.</p>
-        ) : null}
-        {!feedQuery.isLoading && (feedQuery.data ?? []).length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-vibra-border px-4 py-10 text-center text-sm text-zinc-500">
-            Aún no hay publicaciones. Las modelos pueden compartir contenido gratis o de pago.
-          </p>
-        ) : (
+          <p className="text-sm text-zinc-500">Cargando...</p>
+        ) : (feedQuery.data ?? []).length > 0 ? (
           (feedQuery.data ?? []).map((post) => (
             <PostCard
               key={post.id}
@@ -75,6 +67,13 @@ export function ExplorePage() {
               onOpenComments={setCommentsPostId}
             />
           ))
+        ) : (
+          <div className="rounded-2xl border border-dashed border-vibra-border px-4 py-14 text-center">
+            <p className="font-display text-lg font-semibold text-white">Pronto habrá contenido</p>
+            <p className="mt-2 text-sm text-zinc-500">
+              Mientras tanto, conoce modelos en la sección Conocer.
+            </p>
+          </div>
         )}
       </div>
 
