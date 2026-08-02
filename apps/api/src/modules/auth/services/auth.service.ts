@@ -201,16 +201,19 @@ export class AuthService {
   /** Supports values like `15m`, `7d`, `30d`. Falls back to 30 days. */
   private parseDurationMs(value: string) {
     const match = /^(\d+)([smhd])$/i.exec(value.trim());
-    if (!match) return 30 * 24 * 60 * 60 * 1000;
-    const amount = Number(match[1]);
-    const unit = match[2].toLowerCase();
+    const amountRaw = match?.[1];
+    const unitRaw = match?.[2];
+    if (!amountRaw || !unitRaw) return 30 * 24 * 60 * 60 * 1000;
+    const amount = Number(amountRaw);
+    const unit = unitRaw.toLowerCase();
+    const dayMs = 24 * 60 * 60 * 1000;
     const multipliers: Record<string, number> = {
       s: 1000,
       m: 60 * 1000,
       h: 60 * 60 * 1000,
-      d: 24 * 60 * 60 * 1000,
+      d: dayMs,
     };
-    return amount * (multipliers[unit] ?? multipliers.d);
+    return amount * (multipliers[unit] ?? dayMs);
   }
 
   private hashToken(token: string) {

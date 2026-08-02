@@ -11,6 +11,7 @@ import { VideoCallModule } from './modules/video-call/video-call.module';
 import { CreditsModule } from './modules/credits/credits.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PostsModule } from './modules/posts/posts.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AdminModule } from './modules/admin/admin.module';
     CreditsModule,
     NotificationsModule,
     AdminModule,
+    PostsModule,
   ],
   controllers: [HealthController],
 })

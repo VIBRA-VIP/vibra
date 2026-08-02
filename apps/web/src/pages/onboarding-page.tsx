@@ -98,8 +98,6 @@ export function OnboardingPage() {
   const [usePenisCm, setUsePenisCm] = useState(false);
   const [skinTone, setSkinTone] = useState('media');
   const [hair, setHair] = useState('liso');
-  const [messagePrice, setMessagePrice] = useState(10);
-  const [chatPricePerMin, setChatPricePerMin] = useState(15);
   const [videoPricePerMin, setVideoPricePerMin] = useState(80);
   const [contentPrice, setContentPrice] = useState(100);
   const [acceptsEncounters, setAcceptsEncounters] = useState(false);
@@ -172,8 +170,6 @@ export function OnboardingPage() {
         avatarUrl: urls[0],
         galleryUrls: isModel ? urls : [urls[0]],
         attributes,
-        messagePrice: isModel ? messagePrice : undefined,
-        chatPricePerMin: isModel ? chatPricePerMin : undefined,
         videoPricePerMin: isModel ? videoPricePerMin : undefined,
         contentPrice: isModel ? contentPrice : undefined,
         acceptsEncounters: isModel ? acceptsEncounters : false,
@@ -345,13 +341,9 @@ export function OnboardingPage() {
             </section>
 
             <ModelPricingFields
-              messagePrice={messagePrice}
-              chatPricePerMin={chatPricePerMin}
               videoPricePerMin={videoPricePerMin}
               contentPrice={contentPrice}
               acceptsEncounters={acceptsEncounters}
-              onMessagePrice={setMessagePrice}
-              onChatPricePerMin={setChatPricePerMin}
               onVideoPricePerMin={setVideoPricePerMin}
               onContentPrice={setContentPrice}
               onAcceptsEncounters={setAcceptsEncounters}

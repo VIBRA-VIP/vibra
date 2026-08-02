@@ -1,11 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import {
   COLOMBIA_PAYOUT_OPTIONS,
   PAYOUT_ACCOUNT_TYPES,
   colombiaBanks,
   colombiaWallets,
 } from '@vibra/shared';
-import { meRequest } from '@/features/auth';
+import { logoutRequest, meRequest } from '@/features/auth';
+import { setUnreadDocumentTitle } from '@/features/chat/chat-notify';
+import { disconnectChatSocket } from '@/features/chat/chat-socket';
 import { PhotoUploader } from '@/features/media/components/photo-uploader';
 import { ModelPricingFields } from '@/features/profiles/components/model-pricing-fields';
 import {
@@ -19,16 +23,17 @@ const inputClass =
   'w-full rounded-xl border border-vibra-border bg-vibra-muted px-4 py-3 text-sm outline-none focus:border-vibra-pink/50';
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const isModel = user?.role === 'MODEL';
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const [displayName, setDisplayName] = useState(user?.profile?.displayName ?? '');
   const [bio, setBio] = useState(user?.profile?.bio ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.profile?.avatarUrl ?? '');
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
-  const [messagePrice, setMessagePrice] = useState(user?.profile?.messagePrice ?? 10);
-  const [chatPricePerMin, setChatPricePerMin] = useState(user?.profile?.chatPricePerMin ?? 15);
   const [videoPricePerMin, setVideoPricePerMin] = useState(user?.profile?.videoPricePerMin ?? 80);
   const [contentPrice, setContentPrice] = useState(user?.profile?.contentPrice ?? 100);
   const [acceptsEncounters, setAcceptsEncounters] = useState(
@@ -63,8 +68,6 @@ export function SettingsPage() {
               ? [String(profile.avatarUrl)]
               : [];
         setGalleryUrls(photos);
-        setMessagePrice(Number(profile.messagePrice ?? 10));
-        setChatPricePerMin(Number(profile.chatPricePerMin ?? 15));
         setVideoPricePerMin(Number(profile.videoPricePerMin ?? 80));
         setContentPrice(Number(profile.contentPrice ?? 100));
         setAcceptsEncounters(Boolean(profile.acceptsEncounters));
@@ -89,8 +92,6 @@ export function SettingsPage() {
         bio,
         avatarUrl: avatarUrl || undefined,
         galleryUrls: isModel ? galleryUrls : undefined,
-        messagePrice: isModel ? messagePrice : undefined,
-        chatPricePerMin: isModel ? chatPricePerMin : undefined,
         videoPricePerMin: isModel ? videoPricePerMin : undefined,
         contentPrice: isModel ? contentPrice : undefined,
         acceptsEncounters: isModel ? acceptsEncounters : undefined,
@@ -106,6 +107,20 @@ export function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      const refreshToken = localStorage.getItem('vibra_refresh_token') ?? undefined;
+      await logoutRequest(refreshToken);
+    } catch {
+      // ignore
+    }
+    setUnreadDocumentTitle(0);
+    disconnectChatSocket();
+    clearAuth();
+    navigate('/login', { replace: true });
   }
 
   async function savePayout(e: FormEvent) {
@@ -135,11 +150,22 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 px-4 py-8">
-      <div>
-        <h1 className="font-display text-3xl font-bold">Configuración</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          @{user?.profile?.username} · {user?.role === 'MODEL' ? 'Modelo' : 'Usuario'}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Configuración</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            @{user?.profile?.username} · {user?.role === 'MODEL' ? 'Modelo' : 'Usuario'}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          disabled={loggingOut}
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 md:hidden disabled:opacity-60"
+        >
+          <LogOut className="h-4 w-4" />
+          Salir
+        </button>
       </div>
 
       <form
@@ -189,13 +215,9 @@ export function SettingsPage() {
 
         {isModel ? (
           <ModelPricingFields
-            messagePrice={messagePrice}
-            chatPricePerMin={chatPricePerMin}
             videoPricePerMin={videoPricePerMin}
             contentPrice={contentPrice}
             acceptsEncounters={acceptsEncounters}
-            onMessagePrice={setMessagePrice}
-            onChatPricePerMin={setChatPricePerMin}
             onVideoPricePerMin={setVideoPricePerMin}
             onContentPrice={setContentPrice}
             onAcceptsEncounters={setAcceptsEncounters}
@@ -291,6 +313,16 @@ export function SettingsPage() {
 
       {message ? <p className="text-sm text-emerald-400">{message}</p> : null}
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
+
+      <button
+        type="button"
+        onClick={() => void handleLogout()}
+        disabled={loggingOut}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 md:hidden disabled:opacity-60"
+      >
+        <LogOut className="h-4 w-4" />
+        {loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}
+      </button>
     </div>
   );
 }

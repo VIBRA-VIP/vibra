@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Video, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatAttrValue } from '@vibra/shared';
 import { mediaSrc } from '@/features/media/services/media-api';
+import { PostCard, PostCommentsSheet, fetchPostsByAuthor } from '@/features/posts';
 import { toggleFavoriteRequest } from '../services/profiles-api';
 import type { ModelProfile } from '../types/model-profile';
 import { cn } from '@/utils';
@@ -61,10 +62,16 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [favorited, setFavorited] = useState(Boolean(model.isFavorited));
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
   useEffect(() => {
     setFavorited(Boolean(model.isFavorited));
   }, [model.isFavorited, model.userId]);
+
+  const postsQuery = useQuery({
+    queryKey: ['posts', 'by', model.userId],
+    queryFn: () => fetchPostsByAuthor(model.userId),
+  });
 
   const order = model.gender === 'MALE' ? maleAttrOrder : femaleAttrOrder;
   const attrs = order
@@ -81,6 +88,7 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
       setFavorited(data.favorited);
       onFavoriteChange?.(model.userId, data.favorited);
       void queryClient.invalidateQueries({ queryKey: ['models'] });
+      void queryClient.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 
@@ -120,152 +128,177 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
           <X className="h-5 w-5" />
         </button>
 
-        <div className="relative aspect-[4/5] max-h-[42vh] shrink-0 overflow-hidden bg-zinc-800">
-          {model.avatarUrl ? (
-            <img
-              src={mediaSrc(model.avatarUrl)}
-              alt={model.displayName}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div
-              className={`h-full w-full bg-gradient-to-br ${
-                model.gender === 'MALE'
-                  ? 'from-sky-900 via-zinc-800 to-zinc-950'
-                  : 'from-rose-900 via-zinc-800 to-zinc-950'
-              }`}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-vibra-elevated via-transparent to-transparent" />
-          <span
-            className={cn(
-              'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium backdrop-blur',
-              model.isOnline ? 'bg-black/50 text-white' : 'bg-black/50 text-zinc-300',
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="relative aspect-[4/5] max-h-[42vh] shrink-0 overflow-hidden bg-zinc-800">
+            {model.avatarUrl ? (
+              <img
+                src={mediaSrc(model.avatarUrl)}
+                alt={model.displayName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div
+                className={`h-full w-full bg-gradient-to-br ${
+                  model.gender === 'MALE'
+                    ? 'from-sky-900 via-zinc-800 to-zinc-950'
+                    : 'from-rose-900 via-zinc-800 to-zinc-950'
+                }`}
+              />
             )}
-          >
+            <div className="absolute inset-0 bg-gradient-to-t from-vibra-elevated via-transparent to-transparent" />
             <span
               className={cn(
-                'h-1.5 w-1.5 rounded-full',
-                model.isOnline ? 'bg-vibra-online' : 'bg-zinc-500',
-              )}
-            />
-            {model.isOnline ? 'En línea' : 'No disponible'}
-          </span>
-        </div>
-
-        <div className="space-y-5 overflow-y-auto px-5 pb-6 pt-2">
-          <div>
-            <h2 className="font-display text-2xl font-bold">
-              {model.displayName}{' '}
-              {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
-            </h2>
-            <p className="mt-1 text-sm text-zinc-400">
-              {model.age} · @{model.username}
-            </p>
-            <p
-              className={cn(
-                'mt-1 text-xs font-medium',
-                model.isOnline ? 'text-vibra-online' : 'text-zinc-500',
+                'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium backdrop-blur',
+                model.isOnline ? 'bg-black/50 text-white' : 'bg-black/50 text-zinc-300',
               )}
             >
-              {model.isOnline
-                ? 'Disponible ahora para chat y videollamada'
-                : 'No está en línea en este momento'}
-            </p>
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full',
+                  model.isOnline ? 'bg-vibra-online' : 'bg-zinc-500',
+                )}
+              />
+              {model.isOnline ? 'En línea' : 'No disponible'}
+            </span>
           </div>
 
-          {model.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {model.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-vibra-border bg-vibra-muted px-3 py-1 text-xs text-zinc-300"
-                >
-                  {tag}
-                </span>
-              ))}
+          <div className="space-y-5 px-5 pb-4 pt-2">
+            <div>
+              <h2 className="font-display text-2xl font-bold">
+                {model.displayName}{' '}
+                {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
+              </h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                {model.age} · @{model.username}
+              </p>
+              <p
+                className={cn(
+                  'mt-1 text-xs font-medium',
+                  model.isOnline ? 'text-vibra-online' : 'text-zinc-500',
+                )}
+              >
+                {model.isOnline
+                  ? 'Disponible ahora para chat y videollamada'
+                  : 'No está en línea en este momento'}
+              </p>
             </div>
-          ) : null}
 
-          {model.bio ? (
-            <section>
-              <h3 className="font-display text-sm font-semibold text-white">Acerca de</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{model.bio}</p>
-            </section>
-          ) : null}
-
-          {attrs.length > 0 ? (
-            <section>
-              <h3 className="font-display text-sm font-semibold text-white">Detalles</h3>
-              <dl className="mt-3 grid grid-cols-2 gap-2">
-                {attrs.map((item) => (
-                  <div
-                    key={item.key}
-                    className="rounded-xl border border-vibra-border bg-vibra-muted/60 px-3 py-2"
+            {model.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {model.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-vibra-border bg-vibra-muted px-3 py-1 text-xs text-zinc-300"
                   >
-                    <dt className="text-[11px] uppercase tracking-wide text-zinc-500">
-                      {item.label}
-                    </dt>
-                    <dd className="mt-0.5 text-sm text-zinc-200">{item.value}</dd>
-                  </div>
+                    {tag}
+                  </span>
                 ))}
-              </dl>
-            </section>
-          ) : null}
+              </div>
+            ) : null}
 
-          {model.services.length > 0 ? (
-            <section>
-              <h3 className="font-display text-sm font-semibold text-white">Servicios</h3>
-              <ul className="mt-3 space-y-2">
-                {model.services.map((service) => (
-                  <li
-                    key={service.name}
-                    className="flex items-center justify-between rounded-xl border border-vibra-border bg-vibra-muted/60 px-4 py-3 text-sm"
-                  >
-                    <span>{service.name}</span>
-                    <span className="text-zinc-400">
-                      {service.price} {service.unit ?? 'créditos'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+            {model.bio ? (
+              <section>
+                <h3 className="font-display text-sm font-semibold text-white">Acerca de</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{model.bio}</p>
+              </section>
+            ) : null}
 
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={startChat}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Chat
-            </button>
-            <button
-              type="button"
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-vibra-pink py-3 text-sm font-semibold text-vibra-pink"
-            >
-              <Video className="h-4 w-4" />
-              Video
-            </button>
-            <button
-              type="button"
-              disabled={favoriteMutation.isPending}
-              onClick={() => favoriteMutation.mutate()}
-              className={cn(
-                'rounded-xl border p-3 transition disabled:opacity-60',
-                favorited
-                  ? 'border-vibra-pink bg-vibra-pink/20 text-vibra-pink'
-                  : 'border-vibra-border text-zinc-300 hover:border-vibra-pink/50 hover:text-vibra-pink',
+            {attrs.length > 0 ? (
+              <section>
+                <h3 className="font-display text-sm font-semibold text-white">Detalles</h3>
+                <dl className="mt-3 grid grid-cols-2 gap-2">
+                  {attrs.map((item) => (
+                    <div
+                      key={item.key}
+                      className="rounded-xl border border-vibra-border bg-vibra-muted/60 px-3 py-2"
+                    >
+                      <dt className="text-[11px] uppercase tracking-wide text-zinc-500">
+                        {item.label}
+                      </dt>
+                      <dd className="mt-0.5 text-sm text-zinc-200">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
+
+            {model.services.length > 0 ? (
+              <section>
+                <h3 className="font-display text-sm font-semibold text-white">Servicios</h3>
+                <ul className="mt-3 space-y-2">
+                  {model.services.map((service) => (
+                    <li
+                      key={service.name}
+                      className="flex items-center justify-between rounded-xl border border-vibra-border bg-vibra-muted/60 px-4 py-3 text-sm"
+                    >
+                      <span>{service.name}</span>
+                      <span className="text-zinc-400">
+                        {service.price} {service.unit ?? 'créditos'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={startChat}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Chat
+              </button>
+              <button
+                type="button"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-vibra-pink py-3 text-sm font-semibold text-vibra-pink"
+              >
+                <Video className="h-4 w-4" />
+                Video
+              </button>
+              <button
+                type="button"
+                disabled={favoriteMutation.isPending}
+                onClick={() => favoriteMutation.mutate()}
+                className={cn(
+                  'rounded-xl border p-3 transition disabled:opacity-60',
+                  favorited
+                    ? 'border-vibra-pink bg-vibra-pink/20 text-vibra-pink'
+                    : 'border-vibra-border text-zinc-300 hover:border-vibra-pink/50 hover:text-vibra-pink',
+                )}
+                aria-label={favorited ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+                title={favorited ? 'Quitar de favoritos' : 'Guardar favorito'}
+              >
+                <Heart className={cn('h-5 w-5', favorited && 'fill-current')} />
+              </button>
+            </div>
+
+            <section className="space-y-3 border-t border-vibra-border pt-5">
+              <h3 className="font-display text-sm font-semibold text-white">Publicaciones</h3>
+              {postsQuery.isLoading ? (
+                <p className="text-sm text-zinc-500">Cargando...</p>
+              ) : (postsQuery.data ?? []).length === 0 ? (
+                <p className="text-sm text-zinc-500">Aún no hay publicaciones</p>
+              ) : (
+                <div className="space-y-4">
+                  {(postsQuery.data ?? []).map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onOpenComments={setCommentsPostId}
+                    />
+                  ))}
+                </div>
               )}
-              aria-label={favorited ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-              title={favorited ? 'Quitar de favoritos' : 'Guardar favorito'}
-            >
-              <Heart className={cn('h-5 w-5', favorited && 'fill-current')} />
-            </button>
+            </section>
           </div>
         </div>
       </div>
+
+      {commentsPostId ? (
+        <PostCommentsSheet postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
+      ) : null}
     </div>
   );
 }

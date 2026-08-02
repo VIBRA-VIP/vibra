@@ -3,12 +3,14 @@ import { AppShell, MarketingLayout } from '@/layouts';
 import {
   AdminPage,
   ChatsPage,
+  DiscoverPage,
   ExplorePage,
   LandingPage,
   LoginPage,
   OnboardingPage,
   PendingVerificationPage,
   ProfilePage,
+  PublishPage,
   RegisterPage,
   RequestsPage,
   SettingsPage,
@@ -31,7 +33,9 @@ export function AppRoutes() {
         <Route path="/pending-verification" element={<PendingVerificationPage />} />
         <Route element={<AppShell />}>
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/conocer" element={<DiscoverPage />} />
           <Route path="/requests" element={<RequestsPage />} />
+          <Route path="/publish" element={<PublishPage />} />
           <Route path="/chats" element={<ChatsPage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />

@@ -26,14 +26,17 @@ const FOLDER: Record<string, string> = {
   ID_DOCUMENT: 'id-documents',
 };
 
-const ALLOWED_MIME = new Set([
+const IMAGE_MIME = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/gif',
 ]);
 
-const MAX_BYTES = 8 * 1024 * 1024;
+const VIDEO_MIME = new Set(['video/mp4', 'video/webm']);
+
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
 
 @Injectable()
 export class MediaService {
@@ -79,20 +82,33 @@ export class MediaService {
     if (!file?.buffer?.length) {
       throw new BadRequestException('No se recibió ningún archivo');
     }
-    if (!ALLOWED_MIME.has(file.mimetype)) {
-      throw new BadRequestException('Solo se permiten JPG, PNG, WEBP o GIF');
-    }
-    if (file.size > MAX_BYTES) {
-      throw new BadRequestException('La imagen no puede superar 8 MB');
+
+    let mediaType = type;
+    const isVideo = mediaType === MediaType.VIDEO || VIDEO_MIME.has(file.mimetype);
+    if (isVideo) {
+      if (!VIDEO_MIME.has(file.mimetype)) {
+        throw new BadRequestException('Solo se permiten videos MP4 o WEBM');
+      }
+      if (file.size > MAX_VIDEO_BYTES) {
+        throw new BadRequestException('El video no puede superar 40 MB');
+      }
+      mediaType = MediaType.VIDEO;
+    } else {
+      if (!IMAGE_MIME.has(file.mimetype)) {
+        throw new BadRequestException('Solo se permiten JPG, PNG, WEBP o GIF');
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        throw new BadRequestException('La imagen no puede superar 8 MB');
+      }
     }
 
     try {
-      assertUploadableMediaType(type);
+      assertUploadableMediaType(mediaType);
     } catch {
-      throw new BadRequestException(`Unsupported media type: ${type}`);
+      throw new BadRequestException(`Unsupported media type: ${mediaType}`);
     }
 
-    const folder = FOLDER[type] ?? 'other';
+    const folder = FOLDER[mediaType] ?? 'other';
     const ext = extensionForMime(file.mimetype) || '.jpg';
     const key = `media/${folder}/${userId}/${Date.now()}-${randomUUID()}${ext}`;
 
@@ -120,7 +136,7 @@ export class MediaService {
     const media = await this.prisma.media.create({
       data: {
         userId,
-        type,
+        type: mediaType,
         url: publicUrl,
         key,
         mimeType: file.mimetype,
@@ -129,14 +145,14 @@ export class MediaService {
       },
     });
 
-    if (type === MediaType.AVATAR || type === MediaType.BANNER) {
+    if (mediaType === MediaType.AVATAR || mediaType === MediaType.BANNER) {
       await this.prisma.profile.updateMany({
         where: { userId },
-        data: type === MediaType.AVATAR ? { avatarUrl: publicUrl } : { bannerUrl: publicUrl },
+        data: mediaType === MediaType.AVATAR ? { avatarUrl: publicUrl } : { bannerUrl: publicUrl },
       });
     }
 
-    return { url: publicUrl, key, mediaId: media.id, type };
+    return { url: publicUrl, key, mediaId: media.id, type: mediaType };
   }
 
   async createUploadUrl(userId: string, dto: CreateUploadUrlDto) {

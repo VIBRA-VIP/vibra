@@ -8,6 +8,8 @@ import {
   LogOut,
   Settings,
   Inbox,
+  PlusSquare,
+  Users,
 } from 'lucide-react';
 import { AppVersion, Logo } from '@/components';
 import { logoutRequest } from '@/features/auth';
@@ -122,11 +124,13 @@ export function AppShell() {
   const nav: NavItem[] = isModel
     ? [
         { to: '/requests', label: 'Solicitudes', icon: Inbox },
+        { to: '/publish', label: 'Publicar', icon: PlusSquare },
         { to: '/chats', label: 'Chats', icon: MessageCircle, badge: chatBadge },
         { to: '/settings', label: 'Ajustes', icon: Settings },
       ]
     : [
         { to: '/explore', label: 'Explorar', icon: Compass },
+        { to: '/conocer', label: 'Conocer', icon: Users },
         { to: '/chats', label: 'Chats', icon: MessageCircle, badge: chatBadge },
         { to: '/settings', label: 'Ajustes', icon: Settings },
       ];

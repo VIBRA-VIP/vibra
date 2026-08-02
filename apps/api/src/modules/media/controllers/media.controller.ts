@@ -32,7 +32,7 @@ export class MediaController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: 8 * 1024 * 1024 },
+      limits: { fileSize: 40 * 1024 * 1024 },
     }),
   )
   upload(

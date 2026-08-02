@@ -1,5 +1,6 @@
 export { LandingPage } from './landing-page';
 export { ExplorePage } from './explore-page';
+export { DiscoverPage } from './discover-page';
 export { ChatsPage } from './chats-page';
 export { LoginPage, RegisterPage } from './auth-pages';
 export { ProfilePage } from './profile-page';
@@ -8,3 +9,4 @@ export { OnboardingPage } from './onboarding-page';
 export { SettingsPage } from './settings-page';
 export { RequestsPage } from './requests-page';
 export { PendingVerificationPage } from './pending-verification-page';
+export { PublishPage } from './publish-page';

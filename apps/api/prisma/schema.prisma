@@ -78,6 +78,16 @@ enum VerificationStatus {
   REJECTED
 }
 
+enum PostVisibility {
+  FREE
+  PAID
+}
+
+enum PostMediaKind {
+  IMAGE
+  VIDEO
+}
+
 model User {
   id            String    @id @default(uuid()) @db.Uuid
   email         String    @unique
@@ -104,6 +114,9 @@ model User {
   creditTransactions   CreditTransaction[]
   favoritesGiven       Favorite[]           @relation("FavoritesGiven")
   favoritesReceived    Favorite[]           @relation("FavoritesReceived")
+  posts                Post[]
+  postLikes            PostLike[]
+  postComments         PostComment[]
 
   @@index([role])
   @@index([isActive])
@@ -341,6 +354,68 @@ model Favorite {
   @@index([clientId])
   @@index([modelId])
   @@map("favorites")
+}
+
+model Post {
+  id           String         @id @default(uuid()) @db.Uuid
+  authorId     String         @map("author_id") @db.Uuid
+  text         String         @default("")
+  visibility   PostVisibility @default(FREE)
+  priceCredits Int?           @map("price_credits")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  media    PostMedia[]
+  likes    PostLike[]
+  comments PostComment[]
+
+  @@index([authorId, createdAt])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+model PostMedia {
+  id        String        @id @default(uuid()) @db.Uuid
+  postId    String        @map("post_id") @db.Uuid
+  url       String
+  kind      PostMediaKind @default(IMAGE)
+  sortOrder Int           @default(0) @map("sort_order")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, sortOrder])
+  @@map("post_media")
+}
+
+model PostLike {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("post_likes")
+}
+
+model PostComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId])
+  @@map("post_comments")
 }
 
 /** Rotating admin unlock key (plaintext for you to copy from DB; hash used to verify). */
