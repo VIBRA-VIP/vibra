@@ -47,9 +47,9 @@ export function DiscoverPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 text-left">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="min-w-0 flex-1 text-left">
           <h1 className="font-display text-2xl font-bold md:text-3xl">Conocer</h1>
           <p className="mt-1 text-sm text-zinc-400">Descubre modelos por filtros</p>
         </div>

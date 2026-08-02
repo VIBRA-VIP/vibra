@@ -196,7 +196,7 @@ export function ChatsPage() {
 
   if (!myId) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-6">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 text-left">
         <p className="text-sm text-zinc-400">Inicia sesión para ver tus chats.</p>
       </div>
     );
@@ -207,7 +207,7 @@ export function ChatsPage() {
 
   if (activeConversationId && activePeer) {
     return (
-      <div className="mx-auto flex h-full max-w-3xl flex-col px-4 py-4">
+      <div className="mx-auto flex h-full w-full max-w-6xl flex-col px-4 py-4 text-left">
         <div className="mb-4 flex shrink-0 items-center gap-3 border-b border-vibra-border pb-3">
           <button
             type="button"
@@ -324,7 +324,7 @@ export function ChatsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 text-left">
       <h1 className="font-display text-2xl font-bold md:text-3xl">Chats</h1>
 
       {conversationsQuery.isLoading ? (

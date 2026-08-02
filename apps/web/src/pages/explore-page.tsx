@@ -49,13 +49,13 @@ export function ExplorePage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 text-left">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold md:text-3xl">Explorar</h1>
         <p className="mt-1 text-sm text-zinc-400">Publicaciones de las modelos</p>
       </div>
 
-      <div className="space-y-4">
+      <div className="max-w-lg space-y-4">
         {feedQuery.isLoading ? (
           <p className="text-sm text-zinc-500">Cargando...</p>
         ) : (feedQuery.data ?? []).length > 0 ? (

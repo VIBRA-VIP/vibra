@@ -149,10 +149,10 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 px-4 py-8">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Configuración</h1>
+    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 text-left">
+      <div className="flex max-w-2xl items-start justify-between gap-3">
+        <div className="min-w-0 text-left">
+          <h1 className="font-display text-2xl font-bold md:text-3xl">Configuración</h1>
           <p className="mt-1 text-sm text-zinc-400">
             @{user?.profile?.username} · {user?.role === 'MODEL' ? 'Modelo' : 'Usuario'}
           </p>
@@ -169,7 +169,7 @@ export function SettingsPage() {
       </div>
 
       <form
-        className="space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
+        className="max-w-2xl space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
         onSubmit={saveProfile}
       >
         <h2 className="font-display text-lg font-semibold">Perfil</h2>
@@ -235,7 +235,7 @@ export function SettingsPage() {
 
       {isModel ? (
         <form
-          className="space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
+          className="max-w-2xl space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
           onSubmit={savePayout}
         >
           <h2 className="font-display text-lg font-semibold">Cuenta bancaria / pagos</h2>
@@ -318,7 +318,7 @@ export function SettingsPage() {
         type="button"
         onClick={() => void handleLogout()}
         disabled={loggingOut}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 md:hidden disabled:opacity-60"
+        className="flex w-full max-w-2xl items-center justify-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 py-3 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 md:hidden disabled:opacity-60"
       >
         <LogOut className="h-4 w-4" />
         {loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}

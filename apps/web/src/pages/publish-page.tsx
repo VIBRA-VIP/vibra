@@ -79,9 +79,9 @@ export function PublishPage() {
   }
 
   return (
-    <div className="mx-auto max-w-xl space-y-6 px-4 py-8">
-      <div>
-        <h1 className="font-display text-3xl font-bold">Publicar</h1>
+    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 text-left">
+      <div className="text-left">
+        <h1 className="font-display text-2xl font-bold md:text-3xl">Publicar</h1>
         <p className="mt-1 text-sm text-zinc-400">
           Comparte fotos y un video opcional. El contenido de pago se muestra borroso.
         </p>
@@ -93,7 +93,7 @@ export function PublishPage() {
         </p>
       ) : null}
 
-      <form className="space-y-5" onSubmit={onSubmit}>
+      <form className="max-w-xl space-y-5" onSubmit={onSubmit}>
         <textarea
           className={inputClass}
           rows={4}
