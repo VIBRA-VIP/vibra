@@ -1,3 +1,3 @@
 export { PostCard } from './post-card';
-export { PostCommentsSheet } from './post-comments-sheet';
+export { PostCommentsInline } from './post-comments-inline';
 export * from './posts-api';

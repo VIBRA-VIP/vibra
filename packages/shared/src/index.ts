@@ -191,7 +191,7 @@ const ATTR_LOOKUPS: Record<string, readonly AttrOption[]> = {
 export function formatAttrValue(key: string, raw: string): string {
   if (/^\d+(\.\d+)?\s*cm$/i.test(raw.trim())) return raw.trim();
   const opt = ATTR_LOOKUPS[key]?.find((o) => o.id === raw);
-  return opt ? `${opt.emoji} ${opt.label}` : raw;
+  return opt ? opt.label : raw;
 }
 
 export const colombiaBanks = [

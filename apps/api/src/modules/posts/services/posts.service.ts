@@ -66,6 +66,7 @@ export class PostsService {
   }
 
   async listFeed(viewerId: string, take = 30) {
+    const limit = Math.min(take, 50);
     const posts = await this.prisma.post.findMany({
       where: {
         author: {
@@ -78,7 +79,7 @@ export class PostsService {
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: Math.min(take, 50),
+      take: Math.min(limit * 2, 80),
       include: this.postInclude(viewerId),
     });
 
@@ -87,7 +88,44 @@ export class PostsService {
       posts.map((p) => p.authorId),
     );
 
-    return posts.map((p) => this.mapPost(p, viewerId, following.has(p.authorId)));
+    const ranked = [...posts].sort((a, b) => {
+      const fa = following.has(a.authorId) ? 0 : 1;
+      const fb = following.has(b.authorId) ? 0 : 1;
+      if (fa !== fb) return fa - fb;
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    });
+
+    // Mix: keep followed-first, but weave in a discovery post every ~3 followed posts
+    // so the feed stays fresh and entertaining.
+    const followed = ranked.filter((p) => following.has(p.authorId));
+    const discover = ranked.filter((p) => !following.has(p.authorId));
+    const mixed: typeof ranked = [];
+    let fi = 0;
+    let di = 0;
+    while (mixed.length < limit && (fi < followed.length || di < discover.length)) {
+      for (let n = 0; n < 3 && fi < followed.length && mixed.length < limit; n += 1) {
+        mixed.push(followed[fi]!);
+        fi += 1;
+      }
+      if (di < discover.length && mixed.length < limit) {
+        mixed.push(discover[di]!);
+        di += 1;
+      }
+      if (fi >= followed.length) {
+        while (di < discover.length && mixed.length < limit) {
+          mixed.push(discover[di]!);
+          di += 1;
+        }
+      }
+      if (di >= discover.length) {
+        while (fi < followed.length && mixed.length < limit) {
+          mixed.push(followed[fi]!);
+          fi += 1;
+        }
+      }
+    }
+
+    return mixed.map((p) => this.mapPost(p, viewerId, following.has(p.authorId)));
   }
 
   async listByAuthor(authorId: string, viewerId: string, take = 40) {

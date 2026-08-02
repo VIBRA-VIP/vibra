@@ -16,6 +16,8 @@ export interface ModelProfile {
   isAvailable: boolean;
   isVerified: boolean;
   isFavorited?: boolean;
+  hasPosts?: boolean;
+  postCount?: number;
   rating: number;
   ratingCount: number;
   chatPricePerMin: number;

@@ -330,6 +330,9 @@ export class ProfilesService {
       favoriteModelIds = new Set(favs.map((f) => f.modelId));
     }
 
+    const useSmartRank =
+      !params.filter || params.filter === 'all' || params.filter === 'online';
+
     const orderBy =
       params.filter === 'popular'
         ? [{ rating: 'desc' as const }, { ratingCount: 'desc' as const }]
@@ -339,13 +342,79 @@ export class ProfilesService {
 
     const profiles = await this.prisma.profile.findMany({
       where,
-      orderBy,
-      take: 48,
+      orderBy: useSmartRank
+        ? [{ isOnline: 'desc' as const }, { rating: 'desc' as const }]
+        : orderBy,
+      take: useSmartRank ? 120 : 48,
+      include: useSmartRank
+        ? {
+            user: {
+              select: {
+                lastSeenAt: true,
+                _count: { select: { posts: true } },
+                posts: {
+                  select: { createdAt: true },
+                  orderBy: { createdAt: 'desc' },
+                  take: 1,
+                },
+              },
+            },
+          }
+        : undefined,
     });
 
-    return profiles.map((p) => ({
+    if (!useSmartRank) {
+      return profiles.map((p) => ({
+        ...this.mapProfile(p),
+        isFavorited: favoriteModelIds.has(p.userId),
+      }));
+    }
+
+    type Ranked = (typeof profiles)[number] & {
+      user?: {
+        lastSeenAt: Date | null;
+        _count: { posts: number };
+        posts: { createdAt: Date }[];
+      };
+    };
+
+    const ranked = [...(profiles as Ranked[])].sort((a, b) => {
+      const score = (p: Ranked) => {
+        const following = favoriteModelIds.has(p.userId);
+        const postCount = p.user?._count.posts ?? 0;
+        const hasPosts = postCount > 0;
+        // Lower = higher priority
+        if (following && hasPosts && p.isOnline) return 0;
+        if (following && hasPosts) return 1;
+        if (following && p.isOnline) return 2;
+        if (following) return 3;
+        if (hasPosts && p.isOnline) return 4;
+        if (hasPosts) return 5;
+        if (p.isOnline) return 6;
+        return 7;
+      };
+
+      const sa = score(a);
+      const sb = score(b);
+      if (sa !== sb) return sa - sb;
+
+      const lastPostA = a.user?.posts[0]?.createdAt?.getTime() ?? 0;
+      const lastPostB = b.user?.posts[0]?.createdAt?.getTime() ?? 0;
+      if (lastPostA !== lastPostB) return lastPostB - lastPostA;
+
+      if (a.rating !== b.rating) return b.rating - a.rating;
+      if (a.ratingCount !== b.ratingCount) return b.ratingCount - a.ratingCount;
+
+      const seenA = a.user?.lastSeenAt?.getTime() ?? 0;
+      const seenB = b.user?.lastSeenAt?.getTime() ?? 0;
+      return seenB - seenA;
+    });
+
+    return ranked.slice(0, 48).map((p) => ({
       ...this.mapProfile(p),
       isFavorited: favoriteModelIds.has(p.userId),
+      hasPosts: (p.user?._count.posts ?? 0) > 0,
+      postCount: p.user?._count.posts ?? 0,
     }));
   }
 

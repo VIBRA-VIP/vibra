@@ -17,6 +17,11 @@ import { PhotoUploader } from '@/features/media/components/photo-uploader';
 import { ModelPricingFields } from '@/features/profiles/components/model-pricing-fields';
 import { completeProfileRequest } from '@/features/profiles/services/profile-setup-api';
 import { useAuthStore } from '@/store';
+import {
+  BodyAttrIcon,
+  type BodyAttrKind,
+} from '@/components/body-attr-icons';
+import { cn } from '@/utils';
 
 const inputClass =
   'w-full rounded-xl border border-vibra-border bg-vibra-muted px-4 py-3 text-sm outline-none focus:border-vibra-pink/50';
@@ -45,11 +50,13 @@ function Chip({
   );
 }
 
-function EmojiPicker({
+function AttrIconPicker({
+  kind,
   options,
   value,
   onChange,
 }: {
+  kind: BodyAttrKind;
   options: readonly AttrOption[];
   value: string;
   onChange: (id: string) => void;
@@ -63,14 +70,17 @@ function EmojiPicker({
             key={opt.id}
             type="button"
             onClick={() => onChange(opt.id)}
-            className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition ${
+            className={cn(
+              'flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center transition',
               active
-                ? 'border-vibra-pink bg-vibra-pink/20 text-white'
-                : 'border-vibra-border text-zinc-400 hover:border-vibra-pink/40 hover:text-white'
-            }`}
+                ? 'border-vibra-pink bg-vibra-pink/20 text-vibra-pink'
+                : 'border-vibra-border text-zinc-400 hover:border-vibra-pink/40 hover:text-white',
+            )}
           >
-            <span className="text-2xl leading-none">{opt.emoji}</span>
-            <span className="text-xs font-medium">{opt.label}</span>
+            <BodyAttrIcon kind={kind} optionId={opt.id} className="h-8 w-8" />
+            <span className={cn('text-xs font-medium', active ? 'text-white' : undefined)}>
+              {opt.label}
+            </span>
           </button>
         );
       })}
@@ -251,7 +261,8 @@ export function OnboardingPage() {
                 <>
                   <div className="space-y-2">
                     <p className="text-sm text-zinc-400">Tamaño de senos</p>
-                    <EmojiPicker
+                    <AttrIconPicker
+                      kind="breast"
                       options={FEMALE_BREAST_OPTIONS}
                       value={breastSize}
                       onChange={setBreastSize}
@@ -259,7 +270,8 @@ export function OnboardingPage() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-zinc-400">Cadera / glúteos</p>
-                    <EmojiPicker
+                    <AttrIconPicker
+                      kind="butt"
                       options={FEMALE_BUTT_OPTIONS}
                       value={buttType}
                       onChange={setButtType}
@@ -270,7 +282,8 @@ export function OnboardingPage() {
                 <>
                   <div className="space-y-2">
                     <p className="text-sm text-zinc-400">Complexión</p>
-                    <EmojiPicker
+                    <AttrIconPicker
+                      kind="body"
                       options={MALE_BODY_OPTIONS}
                       value={bodyBuild}
                       onChange={setBodyBuild}
@@ -317,7 +330,8 @@ export function OnboardingPage() {
                         />
                       </label>
                     ) : (
-                      <EmojiPicker
+                      <AttrIconPicker
+                        kind="penis"
                         options={MALE_PENIS_OPTIONS}
                         value={penisSize}
                         onChange={setPenisSize}
@@ -328,11 +342,12 @@ export function OnboardingPage() {
               )}
               <div className="space-y-2">
                 <p className="text-sm text-zinc-400">Tono de piel</p>
-                <EmojiPicker options={SKIN_TONE_OPTIONS} value={skinTone} onChange={setSkinTone} />
+                <AttrIconPicker options={SKIN_TONE_OPTIONS} value={skinTone} onChange={setSkinTone} kind="skin" />
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-zinc-400">Cabello</p>
-                <EmojiPicker
+                <AttrIconPicker
+                  kind="hair"
                   options={isFemale ? FEMALE_HAIR_OPTIONS : MALE_HAIR_OPTIONS}
                   value={hair}
                   onChange={setHair}

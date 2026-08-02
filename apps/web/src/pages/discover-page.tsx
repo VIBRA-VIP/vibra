@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, SlidersHorizontal, Video, Heart } from 'lucide-react';
+import { Search, SlidersHorizontal, Heart } from 'lucide-react';
+import { VerifiedBadge } from '@/components/verified-badge';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { fetchModels, ModelProfileModal, type ModelProfile } from '@/features/profiles';
 import { useAuthStore } from '@/store';
-import { cn } from '@/utils';
+import { cn, maskDisplayName } from '@/utils';
 
 const filters = [
   { id: 'all', label: 'Todas' },
@@ -20,6 +21,74 @@ const genders = [
   { id: 'FEMALE', label: 'Mujeres' },
   { id: 'MALE', label: 'Hombres' },
 ];
+
+function ModelCard({
+  model,
+  onSelect,
+}: {
+  model: ModelProfile;
+  onSelect: (model: ModelProfile) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(model)}
+      className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-vibra-border bg-vibra-muted text-left transition hover:border-vibra-pink"
+    >
+      <div
+        className={cn(
+          'absolute inset-0 bg-gradient-to-br',
+          model.gender === 'MALE'
+            ? 'from-sky-800 via-zinc-800 to-zinc-950'
+            : 'from-rose-800 via-zinc-800 to-zinc-950',
+        )}
+      />
+      {model.avatarUrl ? (
+        <img
+          src={mediaSrc(model.avatarUrl)}
+          alt={model.displayName}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-80">
+          {model.gender === 'MALE' ? '😎' : '💃'}
+        </div>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+      <span
+        className={cn(
+          'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium backdrop-blur',
+          model.isOnline ? 'bg-black/50 text-white' : 'bg-black/60 text-zinc-300',
+        )}
+      >
+        <span
+          className={cn(
+            'h-1.5 w-1.5 rounded-full',
+            model.isOnline ? 'bg-vibra-online' : 'bg-zinc-500',
+          )}
+        />
+        {model.isOnline ? 'En línea' : 'Offline'}
+      </span>
+      {model.isFavorited ? (
+        <span className="absolute right-3 top-3 rounded-full bg-black/50 p-1.5 text-vibra-pink backdrop-blur">
+          <Heart className="h-3.5 w-3.5 fill-current" />
+        </span>
+      ) : null}
+      <div className="absolute inset-x-0 bottom-0 p-3">
+        <p className="font-display text-base font-semibold">
+          <span className="inline-flex max-w-full items-center gap-1">
+            <span className="truncate">{maskDisplayName(model.displayName)}</span>
+            {model.isVerified ? <VerifiedBadge className="h-3.5 w-3.5" /> : null}
+          </span>
+        </p>
+        <p className="text-xs text-zinc-300">{model.age} años</p>
+        <p className="mt-1 text-[11px] text-zinc-400">
+          Video {model.videoPricePerMin} créd/min
+        </p>
+      </div>
+    </button>
+  );
+}
 
 export function DiscoverPage() {
   const user = useAuthStore((s) => s.user);
@@ -142,68 +211,7 @@ export function DiscoverPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {models.map((model) => (
-            <button
-              key={model.id}
-              type="button"
-              onClick={() => setSelected(model)}
-              className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-vibra-border bg-vibra-muted text-left transition hover:border-vibra-pink"
-            >
-              <div
-                className={cn(
-                  'absolute inset-0 bg-gradient-to-br',
-                  model.gender === 'MALE'
-                    ? 'from-sky-800 via-zinc-800 to-zinc-950'
-                    : 'from-rose-800 via-zinc-800 to-zinc-950',
-                )}
-              />
-              {model.avatarUrl ? (
-                <img
-                  src={mediaSrc(model.avatarUrl)}
-                  alt={model.displayName}
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-80">
-                  {model.gender === 'MALE' ? '😎' : '💃'}
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <span
-                className={cn(
-                  'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium backdrop-blur',
-                  model.isOnline ? 'bg-black/50 text-white' : 'bg-black/60 text-zinc-300',
-                )}
-              >
-                <span
-                  className={cn(
-                    'h-1.5 w-1.5 rounded-full',
-                    model.isOnline ? 'bg-vibra-online' : 'bg-zinc-500',
-                  )}
-                />
-                {model.isOnline ? 'En línea' : 'Offline'}
-              </span>
-              {model.isFavorited ? (
-                <span className="absolute right-3 top-3 rounded-full bg-black/50 p-1.5 text-vibra-pink backdrop-blur">
-                  <Heart className="h-3.5 w-3.5 fill-current" />
-                </span>
-              ) : null}
-              <span
-                className="absolute bottom-16 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-vibra-pink text-white shadow-lg"
-                aria-hidden
-              >
-                <Video className="h-4 w-4" />
-              </span>
-              <div className="absolute inset-x-0 bottom-0 p-3">
-                <p className="font-display text-base font-semibold">
-                  {model.displayName}{' '}
-                  {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
-                </p>
-                <p className="text-xs text-zinc-300">{model.age} años</p>
-                <p className="mt-1 text-[11px] text-zinc-400">
-                  Video {model.videoPricePerMin} créd/min
-                </p>
-              </div>
-            </button>
+            <ModelCard key={model.id} model={model} onSelect={setSelected} />
           ))}
         </div>
       )}

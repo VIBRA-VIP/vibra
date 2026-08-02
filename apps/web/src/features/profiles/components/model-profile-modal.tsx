@@ -3,10 +3,12 @@ import { Heart, MessageCircle, UserRound, Video, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatAttrValue } from '@vibra/shared';
+import { VerifiedBadge } from '@/components/verified-badge';
+import { BodyAttrIcon, attrKindFromKey } from '@/components/body-attr-icons';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { toggleFavoriteRequest } from '../services/profiles-api';
 import type { ModelProfile } from '../types/model-profile';
-import { cn } from '@/utils';
+import { cn, maskDisplayName } from '@/utils';
 
 const femaleAttrOrder = [
   'breastSize',
@@ -163,8 +165,10 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
           <div className="space-y-5 px-5 pb-6 pt-2">
             <div>
               <h2 className="font-display text-2xl font-bold">
-                {model.displayName}{' '}
-                {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
+                <span className="inline-flex max-w-full items-center gap-1.5">
+                  <span className="truncate">{maskDisplayName(model.displayName)}</span>
+                  {model.isVerified ? <VerifiedBadge className="h-5 w-5" /> : null}
+                </span>
               </h2>
               <p className="mt-1 text-sm text-zinc-400">
                 {model.age ? `${model.age} · ` : ''}@{model.username}
@@ -205,17 +209,28 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
               <section>
                 <h3 className="font-display text-sm font-semibold text-white">Detalles</h3>
                 <dl className="mt-3 grid grid-cols-2 gap-2">
-                  {attrs.map((item) => (
-                    <div
-                      key={item.key}
-                      className="rounded-xl border border-vibra-border bg-vibra-muted/60 px-3 py-2"
-                    >
-                      <dt className="text-[11px] uppercase tracking-wide text-zinc-500">
-                        {item.label}
-                      </dt>
-                      <dd className="mt-0.5 text-sm text-zinc-200">{item.value}</dd>
-                    </div>
-                  ))}
+                  {attrs.map((item) => {
+                    const kind = attrKindFromKey(item.key);
+                    const optionId = String(model.attributes[item.key] ?? '');
+                    return (
+                      <div
+                        key={item.key}
+                        className="rounded-xl border border-vibra-border bg-vibra-muted/60 px-3 py-2"
+                      >
+                        <dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-zinc-500">
+                          {kind ? (
+                            <BodyAttrIcon
+                              kind={kind}
+                              optionId={optionId}
+                              className="h-4 w-4 text-vibra-pink"
+                            />
+                          ) : null}
+                          {item.label}
+                        </dt>
+                        <dd className="mt-0.5 text-sm text-zinc-200">{item.value}</dd>
+                      </div>
+                    );
+                  })}
                 </dl>
               </section>
             ) : null}

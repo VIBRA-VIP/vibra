@@ -1,9 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Heart, MessageCircle, Star, UserRound, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import {
+  Heart,
+  MessageCircle,
+  Star,
+  UserRound,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+} from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { VerifiedBadge } from '@/components/verified-badge';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { toggleFavoriteRequest } from '@/features/profiles/services/profiles-api';
-import { cn } from '@/utils';
+import { cn, maskDisplayName } from '@/utils';
+import { PostCommentsInline } from './post-comments-inline';
 import { togglePostLikeRequest, type FeedPostDto } from './posts-api';
 
 function formatPostDate(iso: string) {
@@ -18,16 +28,17 @@ function formatPostDate(iso: string) {
 type Props = {
   post: FeedPostDto;
   onOpenProfile?: (username: string) => void;
-  onOpenComments?: (postId: string) => void;
 };
 
-export function PostCard({ post, onOpenProfile, onOpenComments }: Props) {
+export function PostCard({ post, onOpenProfile }: Props) {
   const queryClient = useQueryClient();
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState(post.likedByMe);
   const [likesCount, setLikesCount] = useState(post.likesCount);
+  const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const [following, setFollowing] = useState(post.isFollowing);
   const [burst, setBurst] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   const slides = useMemo(() => post.media, [post.media]);
   const current = slides[index] ?? slides[0];
@@ -82,8 +93,10 @@ export function PostCard({ post, onOpenProfile, onOpenComments }: Props) {
           )}
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">
-              {post.author.displayName}{' '}
-              {post.author.isVerified ? <span className="text-vibra-pink">✓</span> : null}
+              <span className="inline-flex max-w-full items-center gap-1">
+                <span className="truncate">{maskDisplayName(post.author.displayName)}</span>
+                {post.author.isVerified ? <VerifiedBadge className="h-3.5 w-3.5" /> : null}
+              </span>
             </p>
             <p className="truncate text-xs text-zinc-500">
               @{post.author.username} · {formatPostDate(post.createdAt)}
@@ -184,50 +197,66 @@ export function PostCard({ post, onOpenProfile, onOpenComments }: Props) {
         <button
           type="button"
           disabled={likeMutation.isPending}
-          onClick={() => likeMutation.mutate()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            likeMutation.mutate();
+          }}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm transition',
+            'relative z-10 inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition',
             liked ? 'text-vibra-pink' : 'text-zinc-300 hover:text-white',
           )}
+          aria-label={liked ? 'Quitar me gusta' : 'Me gusta'}
         >
           <Heart
             className={cn(
-              'h-5 w-5 transition-transform',
-              liked && 'fill-current scale-110',
+              'pointer-events-none h-5 w-5 shrink-0 transition-transform',
+              liked && 'scale-110 fill-current',
               burst && 'scale-125',
             )}
           />
-          {likesCount}
+          <span className="pointer-events-none tabular-nums">{likesCount}</span>
         </button>
         <button
           type="button"
-          onClick={() => onOpenComments?.(post.id)}
-          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white"
+          onClick={() => setCommentsOpen((v) => !v)}
+          className={cn(
+            'relative z-10 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition',
+            commentsOpen ? 'text-vibra-pink' : 'text-zinc-300 hover:text-white',
+          )}
+          aria-expanded={commentsOpen}
+          aria-label="Comentarios"
         >
-          <MessageCircle className="h-5 w-5" />
-          {post.commentsCount}
+          <MessageCircle className="pointer-events-none h-5 w-5 shrink-0" />
+          <span className="pointer-events-none tabular-nums">{commentsCount}</span>
         </button>
         <button
           type="button"
           disabled={followMutation.isPending}
           onClick={() => followMutation.mutate()}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm transition',
+            'relative z-10 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition',
             following ? 'text-vibra-gold' : 'text-zinc-300 hover:text-white',
           )}
         >
-          <Star className={cn('h-5 w-5', following && 'fill-current')} />
-          {following ? 'Siguiendo' : 'Seguir'}
+          <Star className={cn('pointer-events-none h-5 w-5 shrink-0', following && 'fill-current')} />
+          <span className="pointer-events-none">{following ? 'Siguiendo' : 'Seguir'}</span>
         </button>
         <button
           type="button"
           onClick={() => onOpenProfile?.(post.author.username)}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white"
+          className="relative z-10 ml-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white"
         >
-          <UserRound className="h-5 w-5" />
-          Perfil
+          <UserRound className="pointer-events-none h-5 w-5 shrink-0" />
+          <span className="pointer-events-none">Perfil</span>
         </button>
       </div>
+
+      <PostCommentsInline
+        postId={post.id}
+        open={commentsOpen}
+        onCountChange={setCommentsCount}
+      />
     </article>
   );
 }

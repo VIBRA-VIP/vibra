@@ -17,6 +17,7 @@ import {
 import { purgeLegacySharedChatStorage } from '@/features/chat/local-chat-storage';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { useAuthStore } from '@/store';
+import { maskDisplayName } from '@/utils';
 
 export function ChatsPage() {
   const navigate = useNavigate();
@@ -229,7 +230,9 @@ export function ChatsPage() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{activePeer.displayName}</p>
+            <p className="truncate font-semibold">
+              {isModel ? activePeer.displayName : maskDisplayName(activePeer.displayName)}
+            </p>
             <p className="text-xs text-zinc-400">
               {peerTyping ? (
                 <span className="text-vibra-pink">escribiendo...</span>
@@ -252,7 +255,8 @@ export function ChatsPage() {
                 💬
               </p>
               <p className="mt-3 font-display text-lg font-semibold">
-                Chat con {activePeer.displayName}
+                Chat con{' '}
+                {isModel ? activePeer.displayName : maskDisplayName(activePeer.displayName)}
               </p>
               <p className="mt-1 text-sm text-zinc-400">Escribe el primer mensaje abajo.</p>
             </div>
@@ -383,7 +387,9 @@ export function ChatsPage() {
                   ) : null}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{c.peer.displayName}</p>
+                  <p className="truncate font-semibold">
+                    {isModel ? c.peer.displayName : maskDisplayName(c.peer.displayName)}
+                  </p>
                   <p className="truncate text-sm text-zinc-400">
                     {c.lastMessage?.content ?? 'Nueva conversación'}
                   </p>

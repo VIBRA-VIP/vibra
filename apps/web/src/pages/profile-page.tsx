@@ -1,15 +1,16 @@
-import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, BadgeCheck, Heart, MessageCircle, Video } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, Video } from 'lucide-react';
 import { formatAttrValue } from '@vibra/shared';
+import { VerifiedBadge } from '@/components/verified-badge';
+import { BodyAttrIcon, attrKindFromKey } from '@/components/body-attr-icons';
 import { mediaSrc } from '@/features/media/services/media-api';
-import { PostCard, PostCommentsSheet, fetchPostsByAuthor } from '@/features/posts';
+import { PostCard, fetchPostsByAuthor } from '@/features/posts';
 import {
   fetchModelByUsername,
   toggleFavoriteRequest,
 } from '@/features/profiles/services/profiles-api';
-import { cn } from '@/utils';
+import { cn, maskDisplayName } from '@/utils';
 
 const femaleAttrOrder = [
   'breastSize',
@@ -58,7 +59,6 @@ export function ProfilePage() {
   const { id: username } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
   const profileQuery = useQuery({
     queryKey: ['profile', username],
@@ -127,9 +127,9 @@ export function ProfilePage() {
   const initial = model.displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="relative mx-auto w-full max-w-6xl pb-28 text-left">
+    <div className="relative mx-auto w-full max-w-6xl pb-8 text-left">
       {/* Hero */}
-      <div className="relative h-[42vh] min-h-[280px] max-h-[480px] overflow-hidden sm:h-[48vh]">
+      <div className="relative h-[26vh] min-h-[160px] max-h-[220px] overflow-hidden sm:h-[32vh] sm:max-h-[280px]">
         {model.avatarUrl ? (
           <img
             src={mediaSrc(model.avatarUrl)}
@@ -181,208 +181,183 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* Identity card overlapping hero */}
-      <div className="relative z-10 -mt-20 px-4 sm:-mt-24">
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#121212]/90 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-          <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:p-6">
-            <div className="relative -mt-14 shrink-0 self-start sm:-mt-16">
-              <div className="rounded-full bg-gradient-to-br from-vibra-pink to-rose-700 p-[3px] shadow-lg shadow-vibra-pink/25">
-                {model.avatarUrl ? (
-                  <img
-                    src={mediaSrc(model.avatarUrl)}
-                    alt={model.displayName}
-                    className="h-24 w-24 rounded-full object-cover ring-4 ring-[#121212] sm:h-28 sm:w-28"
-                  />
-                ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-zinc-800 text-3xl font-semibold ring-4 ring-[#121212] sm:h-28 sm:w-28">
-                    {initial}
-                  </div>
-                )}
+      {/* Profile body — same gutters for card + sections */}
+      <div className="relative z-10 -mt-12 px-3 sm:-mt-14 sm:px-4">
+        <div className="mx-auto max-w-4xl space-y-6 pb-4 sm:max-w-5xl">
+          <div className="rounded-3xl border border-white/10 bg-[#121212]/90 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-end sm:gap-5 sm:p-6">
+              <div className="relative -mt-14 shrink-0 self-start sm:-mt-16">
+                <div className="rounded-full bg-gradient-to-br from-vibra-pink to-rose-700 p-[3px]">
+                  {model.avatarUrl ? (
+                    <img
+                      src={mediaSrc(model.avatarUrl)}
+                      alt={model.displayName}
+                      className="h-24 w-24 rounded-full object-cover object-center ring-4 ring-[#121212] sm:h-28 sm:w-28"
+                    />
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-zinc-800 text-3xl font-semibold ring-4 ring-[#121212] sm:h-28 sm:w-28">
+                      {initial}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1">
                 <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                  {model.displayName}
-                </h1>
-                {model.isVerified ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-vibra-pink/15 px-2 py-0.5 text-xs font-semibold text-vibra-pink">
-                    <BadgeCheck className="h-3.5 w-3.5" />
-                    Verificada
+                  <span className="inline-flex max-w-full items-center gap-1.5">
+                    <span className="truncate">{maskDisplayName(model.displayName)}</span>
+                    {model.isVerified ? <VerifiedBadge className="h-5 w-5" /> : null}
                   </span>
-                ) : null}
+                </h1>
+                <p className="mt-1 text-sm text-zinc-400">
+                  @{model.username}
+                  {model.age ? ` · ${model.age} años` : ''}
+                </p>
               </div>
-              <p className="mt-1 text-sm text-zinc-400">
-                @{model.username}
-                {model.age ? ` · ${model.age} años` : ''}
-              </p>
-            </div>
 
-            <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
-              <button
-                type="button"
-                disabled={favoriteMutation.isPending}
-                onClick={() => favoriteMutation.mutate()}
-                className={cn(
-                  'inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border text-sm font-semibold transition disabled:opacity-60 sm:flex-none sm:px-4',
-                  model.isFavorited
-                    ? 'border-vibra-pink/50 bg-vibra-pink/15 text-vibra-pink'
-                    : 'border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10',
-                )}
-              >
-                <Heart className={cn('h-4 w-4', model.isFavorited && 'fill-current')} />
-                {model.isFavorited ? 'Siguiendo' : 'Seguir'}
-              </button>
-              <button
-                type="button"
-                onClick={startChat}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-vibra-pink px-4 text-sm font-semibold text-white transition hover:bg-vibra-pink-hover sm:flex-none"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Mensaje
-              </button>
-            </div>
-          </div>
-
-          {model.tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2 border-t border-white/5 px-5 py-4 sm:px-6">
-              {model.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium text-zinc-300 ring-1 ring-white/10"
+              <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
+                <button
+                  type="button"
+                  disabled={favoriteMutation.isPending}
+                  onClick={() => favoriteMutation.mutate()}
+                  className={cn(
+                    'inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border text-sm font-semibold transition disabled:opacity-60 sm:flex-none sm:px-4',
+                    model.isFavorited
+                      ? 'border-vibra-pink/50 bg-vibra-pink/15 text-vibra-pink'
+                      : 'border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10',
+                  )}
                 >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-6 space-y-6 px-4">
-        {model.bio ? (
-          <section className="rounded-3xl border border-white/10 bg-vibra-elevated/80 p-5">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Sobre mí
-            </h2>
-            <p className="mt-3 text-[15px] leading-relaxed text-zinc-300">{model.bio}</p>
-          </section>
-        ) : null}
-
-        {attrs.length > 0 ? (
-          <section>
-            <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Detalles
-            </h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {attrs.map((item) => (
-                <div
-                  key={item.key}
-                  className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent px-3.5 py-3"
+                  <Heart className={cn('h-4 w-4', model.isFavorited && 'fill-current')} />
+                  {model.isFavorited ? 'Siguiendo' : 'Seguir'}
+                </button>
+                <button
+                  type="button"
+                  onClick={startChat}
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-vibra-pink px-4 text-sm font-semibold text-white transition hover:bg-vibra-pink-hover sm:flex-none"
                 >
-                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">{item.label}</p>
-                  <p className="mt-1 text-sm font-medium text-zinc-100">{item.value}</p>
-                </div>
-              ))}
+                  <MessageCircle className="h-4 w-4" />
+                  Mensaje
+                </button>
+              </div>
             </div>
-          </section>
-        ) : null}
 
-        <section>
-          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
-            Precios
-          </h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div className="flex items-center justify-between rounded-2xl border border-vibra-pink/25 bg-vibra-pink/10 px-4 py-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-vibra-pink/20 text-vibra-pink">
-                  <Video className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold">Videollamada</p>
-                  <p className="text-xs text-zinc-400">Por minuto</p>
-                </div>
+            {model.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2 border-t border-white/5 px-5 py-4 sm:px-6">
+                {model.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-medium text-zinc-300 ring-1 ring-white/10"
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
-              <p className="font-display text-lg font-bold text-vibra-gold">
-                {model.videoPricePerMin}
-                <span className="ml-1 text-xs font-medium text-zinc-400">créd</span>
-              </p>
-            </div>
-            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-vibra-elevated px-4 py-4">
-              <div>
-                <p className="text-sm font-semibold">Contenido exclusivo</p>
-                <p className="text-xs text-zinc-400">Foto, video o pack</p>
-              </div>
-              <p className="font-display text-lg font-bold text-white">
-                {model.contentPrice ?? 100}
-                <span className="ml-1 text-xs font-medium text-zinc-400">créd</span>
-              </p>
-            </div>
-            {model.services.map((service) => (
-              <div
-                key={service.name}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-vibra-elevated px-4 py-3.5 sm:col-span-2"
-              >
-                <span className="text-sm">{service.name}</span>
-                <span className="text-sm text-zinc-400">
-                  {service.price} {service.unit ?? 'créditos'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="pb-4">
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Publicaciones
-            </h2>
-            {(postsQuery.data ?? []).length > 0 ? (
-              <span className="text-xs text-zinc-500">{postsQuery.data!.length} posts</span>
             ) : null}
           </div>
 
-          {postsQuery.isLoading ? (
-            <p className="text-sm text-zinc-500">Cargando...</p>
-          ) : (postsQuery.data ?? []).length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-white/10 px-4 py-12 text-center">
-              <p className="text-sm text-zinc-500">Aún no hay publicaciones</p>
-            </div>
-          ) : (
-            <div className="mx-auto max-w-lg space-y-4">
-              {(postsQuery.data ?? []).map((post) => (
-                <PostCard key={post.id} post={post} onOpenComments={setCommentsPostId} />
+          {model.bio ? (
+            <section className="rounded-3xl border border-white/10 bg-vibra-elevated/80 p-5">
+              <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Sobre mí
+              </h2>
+              <p className="mt-3 text-[15px] leading-relaxed text-zinc-300">{model.bio}</p>
+            </section>
+          ) : null}
+
+          {attrs.length > 0 ? (
+            <section>
+              <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Detalles
+              </h2>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {attrs.map((item) => {
+                  const kind = attrKindFromKey(item.key);
+                  const optionId = String(model.attributes[item.key] ?? '');
+                  return (
+                    <div
+                      key={item.key}
+                      className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent px-3.5 py-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        {kind ? (
+                          <BodyAttrIcon
+                            kind={kind}
+                            optionId={optionId}
+                            className="h-5 w-5 text-vibra-pink"
+                          />
+                        ) : null}
+                        <p className="text-[11px] uppercase tracking-wide text-zinc-500">
+                          {item.label}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-sm font-medium text-zinc-100">{item.value}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          <section>
+            <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              Precios
+            </h2>
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between rounded-2xl border border-vibra-pink/25 bg-vibra-pink/10 px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-vibra-pink/20 text-vibra-pink">
+                    <Video className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold">Videollamada</p>
+                    <p className="text-xs text-zinc-400">Por minuto</p>
+                  </div>
+                </div>
+                <p className="font-display text-lg font-bold text-vibra-gold">
+                  {model.videoPricePerMin}
+                  <span className="ml-1 text-xs font-medium text-zinc-400">créd</span>
+                </p>
+              </div>
+              {model.services.map((service) => (
+                <div
+                  key={service.name}
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-vibra-elevated px-4 py-3.5"
+                >
+                  <span className="text-sm">{service.name}</span>
+                  <span className="text-sm text-zinc-400">
+                    {service.price} {service.unit ?? 'créditos'}
+                  </span>
+                </div>
               ))}
             </div>
-          )}
-        </section>
-      </div>
+          </section>
 
-      {/* Sticky actions */}
-      <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:bottom-4">
-        <div className="mx-auto flex max-w-lg gap-2 rounded-2xl border border-white/10 bg-[#121212]/92 p-2 shadow-2xl backdrop-blur-xl">
-          <button
-            type="button"
-            onClick={startChat}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Chat
-          </button>
-          <button
-            type="button"
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-vibra-pink/40 bg-vibra-pink/10 py-3 text-sm font-semibold text-vibra-pink"
-          >
-            <Video className="h-4 w-4" />
-            Video
-          </button>
+          <section>
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <h2 className="font-display text-sm font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Publicaciones
+              </h2>
+              {(postsQuery.data ?? []).length > 0 ? (
+                <span className="text-xs text-zinc-500">{postsQuery.data!.length} posts</span>
+              ) : null}
+            </div>
+
+            {postsQuery.isLoading ? (
+              <p className="text-sm text-zinc-500">Cargando...</p>
+            ) : (postsQuery.data ?? []).length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-white/10 px-4 py-12 text-center">
+                <p className="text-sm text-zinc-500">Aún no hay publicaciones</p>
+              </div>
+            ) : (
+              <div className="mx-auto max-w-lg space-y-4">
+                {(postsQuery.data ?? []).map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </div>
-
-      {commentsPostId ? (
-        <PostCommentsSheet postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
-      ) : null}
     </div>
   );
 }

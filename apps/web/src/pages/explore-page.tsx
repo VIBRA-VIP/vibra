@@ -1,14 +1,12 @@
-import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { PostCard, PostCommentsSheet, fetchFeedPosts } from '@/features/posts';
+import { PostCard, fetchFeedPosts } from '@/features/posts';
 import { useAuthStore } from '@/store';
 
 export function ExplorePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isModel = user?.role === 'MODEL';
-  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
   const feedQuery = useQuery({
     queryKey: ['posts', 'feed'],
@@ -36,7 +34,6 @@ export function ExplorePage() {
               key={post.id}
               post={post}
               onOpenProfile={(username) => navigate(`/profile/${username}`)}
-              onOpenComments={setCommentsPostId}
             />
           ))
         ) : (
@@ -48,10 +45,6 @@ export function ExplorePage() {
           </div>
         )}
       </div>
-
-      {commentsPostId ? (
-        <PostCommentsSheet postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
-      ) : null}
     </div>
   );
 }

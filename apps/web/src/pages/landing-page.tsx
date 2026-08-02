@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Check, Play, Shield, MessageCircle, Video, CreditCard } from 'lucide-react';
+import { VerifiedBadge } from '@/components/verified-badge';
 
 const features = [
   {
@@ -97,9 +98,7 @@ export function LandingPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">
                       {model.name}{' '}
-                      <span className="text-vibra-pink" aria-label="verificado">
-                        ✓
-                      </span>
+                      <VerifiedBadge className="ml-0.5 inline h-3.5 w-3.5" label="verificado" />
                     </p>
                     <p className="truncate text-xs text-zinc-400">
                       {model.service} · {model.price}
