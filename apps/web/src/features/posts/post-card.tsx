@@ -17,7 +17,7 @@ function formatPostDate(iso: string) {
 
 type Props = {
   post: FeedPostDto;
-  onOpenProfile?: (userId: string) => void;
+  onOpenProfile?: (username: string) => void;
   onOpenComments?: (postId: string) => void;
 };
 
@@ -66,7 +66,7 @@ export function PostCard({ post, onOpenProfile, onOpenComments }: Props) {
       <header className="flex items-center gap-3 px-4 py-3">
         <button
           type="button"
-          onClick={() => onOpenProfile?.(post.author.userId)}
+          onClick={() => onOpenProfile?.(post.author.username)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           {post.author.avatarUrl ? (
@@ -221,7 +221,7 @@ export function PostCard({ post, onOpenProfile, onOpenComments }: Props) {
         </button>
         <button
           type="button"
-          onClick={() => onOpenProfile?.(post.author.userId)}
+          onClick={() => onOpenProfile?.(post.author.username)}
           className="ml-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white"
         >
           <UserRound className="h-5 w-5" />

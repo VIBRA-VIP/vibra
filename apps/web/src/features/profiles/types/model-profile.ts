@@ -20,6 +20,7 @@ export interface ModelProfile {
   ratingCount: number;
   chatPricePerMin: number;
   videoPricePerMin: number;
+  contentPrice?: number;
   tags: string[];
   gender: 'FEMALE' | 'MALE' | 'OTHER';
   age: number;

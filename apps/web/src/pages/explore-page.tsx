@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PostCard, PostCommentsSheet, fetchFeedPosts } from '@/features/posts';
-import { ModelProfileModal, type ModelProfile } from '@/features/profiles';
 import { useAuthStore } from '@/store';
 
 export function ExplorePage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isModel = user?.role === 'MODEL';
-  const [selected, setSelected] = useState<ModelProfile | null>(null);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
   const feedQuery = useQuery({
@@ -16,33 +15,6 @@ export function ExplorePage() {
     queryFn: fetchFeedPosts,
     enabled: !isModel,
   });
-
-  function openProfileFromPost(userId: string) {
-    const post = (feedQuery.data ?? []).find((p) => p.author.userId === userId);
-    if (!post) return;
-    setSelected({
-      id: post.author.userId,
-      userId: post.author.userId,
-      displayName: post.author.displayName,
-      username: post.author.username,
-      avatarUrl: post.author.avatarUrl,
-      bannerUrl: null,
-      age: 0,
-      isOnline: false,
-      isAvailable: false,
-      isVerified: post.author.isVerified,
-      rating: 0,
-      ratingCount: 0,
-      chatPricePerMin: 0,
-      videoPricePerMin: 0,
-      tags: [],
-      gender: 'FEMALE',
-      bio: null,
-      attributes: {},
-      services: [],
-      isFavorited: post.isFollowing,
-    });
-  }
 
   if (isModel) {
     return <Navigate to="/requests" replace />;
@@ -63,7 +35,7 @@ export function ExplorePage() {
             <PostCard
               key={post.id}
               post={post}
-              onOpenProfile={openProfileFromPost}
+              onOpenProfile={(username) => navigate(`/profile/${username}`)}
               onOpenComments={setCommentsPostId}
             />
           ))
@@ -76,18 +48,6 @@ export function ExplorePage() {
           </div>
         )}
       </div>
-
-      {selected ? (
-        <ModelProfileModal
-          model={selected}
-          onClose={() => setSelected(null)}
-          onFavoriteChange={(modelUserId, favorited) => {
-            setSelected((prev) =>
-              prev && prev.userId === modelUserId ? { ...prev, isFavorited: favorited } : prev,
-            );
-          }}
-        />
-      ) : null}
 
       {commentsPostId ? (
         <PostCommentsSheet postId={commentsPostId} onClose={() => setCommentsPostId(null)} />

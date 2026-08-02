@@ -28,6 +28,11 @@ export async function fetchModels(params?: {
   return data;
 }
 
+export async function fetchModelByUsername(username: string) {
+  const { data } = await api.get<ModelProfile>(`/api/profiles/${encodeURIComponent(username)}`);
+  return data;
+}
+
 export async function fetchClients(params?: {
   gender?: string;
   filter?: string;

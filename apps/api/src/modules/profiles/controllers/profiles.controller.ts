@@ -91,7 +91,10 @@ export class ProfilesController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':username')
-  getByUsername(@Param('username') username: string) {
-    return this.profilesService.getByUsername(username);
+  getByUsername(
+    @CurrentUser() user: { id: string },
+    @Param('username') username: string,
+  ) {
+    return this.profilesService.getByUsername(username, user.id);
   }
 }

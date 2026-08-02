@@ -1,56 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Heart, MessageCircle, Video, X } from 'lucide-react';
+import { Heart, MessageCircle, UserRound, Video, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatAttrValue } from '@vibra/shared';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { mediaSrc } from '@/features/media/services/media-api';
-import { PostCard, PostCommentsSheet, fetchPostsByAuthor } from '@/features/posts';
 import { toggleFavoriteRequest } from '../services/profiles-api';
 import type { ModelProfile } from '../types/model-profile';
 import { cn } from '@/utils';
-
-const femaleAttrOrder = [
-  'breastSize',
-  'buttType',
-  'skinTone',
-  'hair',
-  'height',
-  'bodyType',
-  'bust',
-  'waist',
-  'hips',
-  'tattoos',
-  'vibe',
-];
-
-const maleAttrOrder = [
-  'bodyBuild',
-  'penisSize',
-  'skinTone',
-  'hair',
-  'height',
-  'bodyType',
-  'penisGirth',
-  'tattoos',
-  'vibe',
-];
-
-const attrLabels: Record<string, string> = {
-  height: 'Altura',
-  bodyType: 'Complexión',
-  bodyBuild: 'Complexión',
-  skinTone: 'Tono de piel',
-  breastSize: 'Senos',
-  buttType: 'Glúteos',
-  bust: 'Busto',
-  waist: 'Cintura',
-  hips: 'Cadera',
-  tattoos: 'Tatuajes',
-  hair: 'Cabello',
-  vibe: 'Estilo',
-  penisSize: 'Miembro',
-  penisGirth: 'Grosor',
-};
 
 interface Props {
   model: ModelProfile;
@@ -62,25 +17,10 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [favorited, setFavorited] = useState(Boolean(model.isFavorited));
-  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
   useEffect(() => {
     setFavorited(Boolean(model.isFavorited));
   }, [model.isFavorited, model.userId]);
-
-  const postsQuery = useQuery({
-    queryKey: ['posts', 'by', model.userId],
-    queryFn: () => fetchPostsByAuthor(model.userId),
-  });
-
-  const order = model.gender === 'MALE' ? maleAttrOrder : femaleAttrOrder;
-  const attrs = order
-    .filter((key) => model.attributes[key] != null && model.attributes[key] !== '')
-    .map((key) => ({
-      key,
-      label: attrLabels[key] ?? key,
-      value: formatAttrValue(key, String(model.attributes[key])),
-    }));
 
   const favoriteMutation = useMutation({
     mutationFn: () => toggleFavoriteRequest(model.userId),
@@ -106,6 +46,11 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
     });
   }
 
+  function goToProfile() {
+    onClose();
+    navigate(`/profile/${model.username}`);
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
@@ -129,7 +74,7 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
         </button>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="relative aspect-[4/5] max-h-[42vh] shrink-0 overflow-hidden bg-zinc-800">
+          <div className="relative aspect-[4/5] max-h-[48vh] shrink-0 overflow-hidden bg-zinc-800">
             {model.avatarUrl ? (
               <img
                 src={mediaSrc(model.avatarUrl)}
@@ -162,90 +107,35 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
             </span>
           </div>
 
-          <div className="space-y-5 px-5 pb-4 pt-2">
+          <div className="space-y-4 px-5 pb-6 pt-2">
             <div>
               <h2 className="font-display text-2xl font-bold">
                 {model.displayName}{' '}
                 {model.isVerified ? <span className="text-vibra-pink">✓</span> : null}
               </h2>
               <p className="mt-1 text-sm text-zinc-400">
-                {model.age} · @{model.username}
-              </p>
-              <p
-                className={cn(
-                  'mt-1 text-xs font-medium',
-                  model.isOnline ? 'text-vibra-online' : 'text-zinc-500',
-                )}
-              >
-                {model.isOnline
-                  ? 'Disponible ahora para chat y videollamada'
-                  : 'No está en línea en este momento'}
+                {model.age ? `${model.age} · ` : ''}@{model.username}
               </p>
             </div>
 
-            {model.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {model.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-vibra-border bg-vibra-muted px-3 py-1 text-xs text-zinc-300"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-
             {model.bio ? (
-              <section>
-                <h3 className="font-display text-sm font-semibold text-white">Acerca de</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{model.bio}</p>
-              </section>
+              <p className="line-clamp-3 text-sm leading-relaxed text-zinc-400">{model.bio}</p>
             ) : null}
 
-            {attrs.length > 0 ? (
-              <section>
-                <h3 className="font-display text-sm font-semibold text-white">Detalles</h3>
-                <dl className="mt-3 grid grid-cols-2 gap-2">
-                  {attrs.map((item) => (
-                    <div
-                      key={item.key}
-                      className="rounded-xl border border-vibra-border bg-vibra-muted/60 px-3 py-2"
-                    >
-                      <dt className="text-[11px] uppercase tracking-wide text-zinc-500">
-                        {item.label}
-                      </dt>
-                      <dd className="mt-0.5 text-sm text-zinc-200">{item.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            ) : null}
+            <button
+              type="button"
+              onClick={goToProfile}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
+            >
+              <UserRound className="h-4 w-4" />
+              Ir a perfil
+            </button>
 
-            {model.services.length > 0 ? (
-              <section>
-                <h3 className="font-display text-sm font-semibold text-white">Servicios</h3>
-                <ul className="mt-3 space-y-2">
-                  {model.services.map((service) => (
-                    <li
-                      key={service.name}
-                      className="flex items-center justify-between rounded-xl border border-vibra-border bg-vibra-muted/60 px-4 py-3 text-sm"
-                    >
-                      <span>{service.name}</span>
-                      <span className="text-zinc-400">
-                        {service.price} {service.unit ?? 'créditos'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            <div className="flex gap-2 pt-1">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={startChat}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-vibra-pink py-3 text-sm font-semibold transition hover:bg-vibra-pink-hover"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-vibra-border py-3 text-sm font-semibold text-zinc-200"
               >
                 <MessageCircle className="h-4 w-4" />
                 Chat
@@ -265,40 +155,16 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
                   'rounded-xl border p-3 transition disabled:opacity-60',
                   favorited
                     ? 'border-vibra-pink bg-vibra-pink/20 text-vibra-pink'
-                    : 'border-vibra-border text-zinc-300 hover:border-vibra-pink/50 hover:text-vibra-pink',
+                    : 'border-vibra-border text-zinc-300',
                 )}
                 aria-label={favorited ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-                title={favorited ? 'Quitar de favoritos' : 'Guardar favorito'}
               >
                 <Heart className={cn('h-5 w-5', favorited && 'fill-current')} />
               </button>
             </div>
-
-            <section className="space-y-3 border-t border-vibra-border pt-5">
-              <h3 className="font-display text-sm font-semibold text-white">Publicaciones</h3>
-              {postsQuery.isLoading ? (
-                <p className="text-sm text-zinc-500">Cargando...</p>
-              ) : (postsQuery.data ?? []).length === 0 ? (
-                <p className="text-sm text-zinc-500">Aún no hay publicaciones</p>
-              ) : (
-                <div className="space-y-4">
-                  {(postsQuery.data ?? []).map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onOpenComments={setCommentsPostId}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
           </div>
         </div>
       </div>
-
-      {commentsPostId ? (
-        <PostCommentsSheet postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
-      ) : null}
     </div>
   );
 }

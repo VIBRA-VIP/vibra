@@ -458,14 +458,22 @@ export class ProfilesService {
     };
   }
 
-  async getByUsername(username: string) {
+  async getByUsername(username: string, viewerId?: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { username: username.toLowerCase() },
     });
     if (!profile) {
       throw new NotFoundException('Perfil no encontrado');
     }
-    return this.mapProfile(profile);
+    const mapped = this.mapProfile(profile);
+    if (!viewerId) return mapped;
+
+    const fav = await this.prisma.favorite.findUnique({
+      where: {
+        clientId_modelId: { clientId: viewerId, modelId: profile.userId },
+      },
+    });
+    return { ...mapped, isFavorited: Boolean(fav) };
   }
 
   private mapProfile(p: {
