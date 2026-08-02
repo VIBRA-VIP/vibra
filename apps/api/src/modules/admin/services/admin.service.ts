@@ -16,8 +16,8 @@ import { PrismaService } from '../../../database/prisma.service';
 import type { Env } from '../../../config/env.schema';
 import { MailService } from '../../mail/mail.service';
 
-const ROTATE_EVERY_MS = 24 * 60 * 60 * 1000;
-const CHECK_EVERY_MS = 60 * 60 * 1000; // check hourly
+const ROTATE_EVERY_MS = 5 * 60 * 60 * 1000; // 5 hours
+const CHECK_EVERY_MS = 5 * 60 * 1000; // check every 5 minutes
 
 @Injectable()
 export class AdminService implements OnModuleInit, OnModuleDestroy {
@@ -71,7 +71,7 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.logger.warn(
-      `Admin key rotated. Copy key_plain from admin_secrets in the DB (valid ~24h).`,
+      `Admin key rotated. Copy key_plain from admin_secrets in the DB (valid ~5h).`,
     );
     return plain;
   }
