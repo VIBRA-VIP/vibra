@@ -16,6 +16,7 @@ export interface ModelProfile {
   isAvailable: boolean;
   isVerified: boolean;
   isFavorited?: boolean;
+  followersCount?: number;
   hasPosts?: boolean;
   postCount?: number;
   rating: number;

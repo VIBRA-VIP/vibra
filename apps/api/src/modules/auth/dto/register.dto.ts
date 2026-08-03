@@ -10,8 +10,10 @@ import {
   MinLength,
 } from 'class-validator';
 import { ProfileGender, UserRole } from '@prisma/client';
+import { COUNTRIES } from '@vibra/shared';
 
 const MEDIA_URL = /^(https?:\/\/.+|\/uploads\/.+)$/;
+const COUNTRY_CODES = COUNTRIES.map((c) => c.code);
 
 export class RegisterDto {
   @IsEmail()
@@ -39,6 +41,10 @@ export class RegisterDto {
   /** ISO date YYYY-MM-DD */
   @IsDateString()
   birthDate!: string;
+
+  /** ISO country code from COUNTRIES list */
+  @IsIn(COUNTRY_CODES)
+  country!: string;
 
   @IsOptional()
   @IsString()

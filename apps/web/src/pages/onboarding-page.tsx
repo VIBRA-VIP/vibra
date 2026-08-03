@@ -109,8 +109,6 @@ export function OnboardingPage() {
   const [skinTone, setSkinTone] = useState('media');
   const [hair, setHair] = useState('liso');
   const [videoPricePerMin, setVideoPricePerMin] = useState(80);
-  const [contentPrice, setContentPrice] = useState(100);
-  const [acceptsEncounters, setAcceptsEncounters] = useState(false);
   const [idDocumentUrls, setIdDocumentUrls] = useState<string[]>([]);
   const [idDocumentBackUrls, setIdDocumentBackUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -181,8 +179,6 @@ export function OnboardingPage() {
         galleryUrls: isModel ? urls : [urls[0]],
         attributes,
         videoPricePerMin: isModel ? videoPricePerMin : undefined,
-        contentPrice: isModel ? contentPrice : undefined,
-        acceptsEncounters: isModel ? acceptsEncounters : false,
         idDocumentUrl: isModel ? idDocumentUrls[0] : undefined,
         idDocumentBackUrl: isModel ? idDocumentBackUrls[0] : undefined,
         markCompleted: true,
@@ -357,11 +353,7 @@ export function OnboardingPage() {
 
             <ModelPricingFields
               videoPricePerMin={videoPricePerMin}
-              contentPrice={contentPrice}
-              acceptsEncounters={acceptsEncounters}
               onVideoPricePerMin={setVideoPricePerMin}
-              onContentPrice={setContentPrice}
-              onAcceptsEncounters={setAcceptsEncounters}
             />
 
             <section className="space-y-3">

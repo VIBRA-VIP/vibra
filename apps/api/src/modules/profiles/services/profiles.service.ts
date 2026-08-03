@@ -568,7 +568,10 @@ export class ProfilesService {
     if (!profile) {
       throw new NotFoundException('Perfil no encontrado');
     }
-    const mapped = this.mapProfile(profile);
+    const followersCount = await this.prisma.favorite.count({
+      where: { modelId: profile.userId },
+    });
+    const mapped = { ...this.mapProfile(profile), followersCount };
     if (!viewerId) return mapped;
 
     const fav = await this.prisma.favorite.findUnique({
@@ -601,6 +604,7 @@ export class ProfilesService {
     tags: string[];
     gender: ProfileGender;
     age: number;
+    country: string | null;
     attributes: unknown;
     services: unknown;
     payoutBankId: number | null;
@@ -630,6 +634,7 @@ export class ProfilesService {
       tags: p.tags,
       gender: p.gender,
       age: p.age,
+      country: p.country,
       attributes: (p.attributes as Record<string, unknown> | null) ?? {},
       services: (p.services as Array<{ name: string; price: number; unit?: string }> | null) ?? [],
       payoutBankId: p.payoutBankId,

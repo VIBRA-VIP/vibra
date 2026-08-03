@@ -30,14 +30,14 @@ export class PostsService {
 
     const images = dto.media.filter((m) => m.kind === 'IMAGE');
     const videos = dto.media.filter((m) => m.kind === 'VIDEO');
-    if (images.length < 1) {
-      throw new BadRequestException('Agrega al menos 1 imagen');
+    if (dto.media.length < 1) {
+      throw new BadRequestException('Agrega al menos 1 foto o video');
     }
-    if (images.length > 10) {
-      throw new BadRequestException('Máximo 10 imágenes');
+    if (dto.media.length > 8) {
+      throw new BadRequestException('Máximo 8 archivos por publicación');
     }
-    if (videos.length > 1) {
-      throw new BadRequestException('Máximo 1 video por publicación');
+    if (images.length + videos.length !== dto.media.length) {
+      throw new BadRequestException('Tipo de medio inválido');
     }
 
     const priceCredits =

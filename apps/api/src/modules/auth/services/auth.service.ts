@@ -78,6 +78,7 @@ export class AuthService {
             gender,
             birthDate,
             age,
+            country: dto.country,
             profileCompleted: false,
             verificationStatus: isModel
               ? VerificationStatus.PENDING
@@ -253,6 +254,7 @@ export class AuthService {
               ? user.profile.birthDate.toISOString().slice(0, 10)
               : null,
             age: user.profile.age,
+            country: user.profile.country,
             chatPricePerMin: user.profile.chatPricePerMin,
             videoPricePerMin: user.profile.videoPricePerMin,
             messagePrice: user.profile.messagePrice,

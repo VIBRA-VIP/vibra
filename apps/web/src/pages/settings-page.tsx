@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
 import {
   COLOMBIA_PAYOUT_OPTIONS,
   PAYOUT_ACCOUNT_TYPES,
@@ -18,9 +18,42 @@ import {
   updateSettingsRequest,
 } from '@/features/profiles/services/profile-setup-api';
 import { useAuthStore } from '@/store';
+import { cn } from '@/utils';
 
 const inputClass =
   'w-full rounded-xl border border-vibra-border bg-vibra-muted px-4 py-3 text-sm outline-none focus:border-vibra-pink/50';
+
+function SettingsAccordion({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="max-w-2xl overflow-hidden rounded-2xl border border-vibra-border bg-vibra-elevated">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-white/[0.03]"
+      >
+        <span className="font-display text-base font-semibold text-white">{title}</span>
+        <ChevronDown
+          className={cn(
+            'h-5 w-5 shrink-0 text-zinc-400 transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+        />
+      </button>
+      {open ? <div className="border-t border-vibra-border px-5 py-4">{children}</div> : null}
+    </div>
+  );
+}
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -30,15 +63,12 @@ export function SettingsPage() {
   const isModel = user?.role === 'MODEL';
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const [displayName, setDisplayName] = useState(user?.profile?.displayName ?? '');
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [payoutOpen, setPayoutOpen] = useState(false);
+
   const [bio, setBio] = useState(user?.profile?.bio ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.profile?.avatarUrl ?? '');
-  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [videoPricePerMin, setVideoPricePerMin] = useState(user?.profile?.videoPricePerMin ?? 80);
-  const [contentPrice, setContentPrice] = useState(user?.profile?.contentPrice ?? 100);
-  const [acceptsEncounters, setAcceptsEncounters] = useState(
-    user?.profile?.acceptsEncounters ?? false,
-  );
   const [payoutBankId, setPayoutBankId] = useState<number>(user?.profile?.payoutBankId ?? 1);
   const [payoutAccountType, setPayoutAccountType] = useState<'AHORROS' | 'CORRIENTE'>(
     (user?.profile?.payoutAccountType as 'AHORROS' | 'CORRIENTE') ?? 'AHORROS',
@@ -52,25 +82,9 @@ export function SettingsPage() {
   useEffect(() => {
     void getMyProfile()
       .then((profile: Record<string, unknown>) => {
-        setDisplayName(String(profile.displayName ?? ''));
         setBio(String(profile.bio ?? ''));
         setAvatarUrl(String(profile.avatarUrl ?? ''));
-        const gallery = Array.isArray(profile.gallery)
-          ? (profile.gallery as { url?: string }[])
-              .map((g) => g.url)
-              .filter((u): u is string => Boolean(u))
-          : [];
-        // Si no hay galería aún, usa el avatar como primera foto visible.
-        const photos =
-          gallery.length > 0
-            ? gallery
-            : profile.avatarUrl
-              ? [String(profile.avatarUrl)]
-              : [];
-        setGalleryUrls(photos);
         setVideoPricePerMin(Number(profile.videoPricePerMin ?? 80));
-        setContentPrice(Number(profile.contentPrice ?? 100));
-        setAcceptsEncounters(Boolean(profile.acceptsEncounters));
         setPayoutBankId(Number(profile.payoutBankId ?? 1));
         setPayoutAccountType(
           (profile.payoutAccountType as 'AHORROS' | 'CORRIENTE') ?? 'AHORROS',
@@ -88,17 +102,14 @@ export function SettingsPage() {
     setMessage(null);
     try {
       await updateSettingsRequest({
-        displayName: isModel ? displayName : undefined,
         bio,
         avatarUrl: avatarUrl || undefined,
-        galleryUrls: isModel ? galleryUrls : undefined,
         videoPricePerMin: isModel ? videoPricePerMin : undefined,
-        contentPrice: isModel ? contentPrice : undefined,
-        acceptsEncounters: isModel ? acceptsEncounters : undefined,
       });
       const me = await meRequest();
       setUser(me);
       setMessage('Perfil actualizado');
+      setProfileOpen(false);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
@@ -138,6 +149,7 @@ export function SettingsPage() {
       const me = await meRequest();
       setUser(me);
       setMessage('Cuenta bancaria guardada');
+      setPayoutOpen(false);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string | string[] } } })?.response?.data
@@ -149,158 +161,145 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 text-left">
-      <div className="min-w-0 text-left">
+    <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-8 text-left">
+      <div className="min-w-0 pb-2 text-left">
         <h1 className="font-display text-2xl font-bold md:text-3xl">Configuración</h1>
         <p className="mt-1 text-sm text-zinc-400">
           @{user?.profile?.username} · {user?.role === 'MODEL' ? 'Modelo' : 'Usuario'}
         </p>
       </div>
 
-      <form
-        className="max-w-2xl space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
-        onSubmit={saveProfile}
+      <SettingsAccordion
+        title="Ajustar perfil"
+        open={profileOpen}
+        onToggle={() => {
+          setProfileOpen((v) => !v);
+          if (!profileOpen) setPayoutOpen(false);
+        }}
       >
-        <h2 className="font-display text-lg font-semibold">Perfil</h2>
-        {isModel ? (
-          <>
-            <input
-              className={inputClass}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Nombre visible"
-            />
+        <form className="space-y-4" onSubmit={saveProfile}>
+          {isModel ? null : (
             <div className="space-y-2">
-              <p className="text-sm text-zinc-400">Galería (hasta 8 fotos)</p>
+              <p className="text-center text-sm text-zinc-400">Foto de perfil</p>
               <PhotoUploader
-                photos={galleryUrls}
-                onChange={(urls) => {
-                  setGalleryUrls(urls);
-                  setAvatarUrl(urls[0] ?? '');
-                }}
-                max={8}
-                type="GALLERY"
-                label="Agregar foto"
+                photos={avatarUrl ? [avatarUrl] : []}
+                onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
+                max={1}
+                type="AVATAR"
+                variant="avatar"
+                label="Elegir foto"
               />
             </div>
-          </>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-center text-sm text-zinc-400">Foto de perfil</p>
-            <PhotoUploader
-              photos={avatarUrl ? [avatarUrl] : []}
-              onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
-              max={1}
-              type="AVATAR"
-              variant="avatar"
-              label="Elegir foto"
+          )}
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-zinc-300">Sobre mí</p>
+            <textarea
+              className={inputClass}
+              rows={4}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Cuéntales quién eres..."
             />
           </div>
-        )}
-        <textarea
-          className={inputClass}
-          rows={4}
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          placeholder="Sobre mí"
-        />
 
-        {isModel ? (
-          <ModelPricingFields
-            videoPricePerMin={videoPricePerMin}
-            contentPrice={contentPrice}
-            acceptsEncounters={acceptsEncounters}
-            onVideoPricePerMin={setVideoPricePerMin}
-            onContentPrice={setContentPrice}
-            onAcceptsEncounters={setAcceptsEncounters}
-          />
-        ) : null}
+          {isModel ? (
+            <ModelPricingFields
+              videoPricePerMin={videoPricePerMin}
+              onVideoPricePerMin={setVideoPricePerMin}
+            />
+          ) : null}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-xl bg-vibra-pink px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
-        >
-          Guardar perfil
-        </button>
-      </form>
-
-      {isModel ? (
-        <form
-          className="max-w-2xl space-y-4 rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
-          onSubmit={savePayout}
-        >
-          <h2 className="font-display text-lg font-semibold">Cuenta bancaria / pagos</h2>
-          <p className="text-xs text-zinc-500">Bancos y billeteras de Colombia</p>
-
-          <label className="block text-sm text-zinc-400">
-            Entidad
-            <select
-              className={`${inputClass} mt-1`}
-              value={payoutBankId}
-              onChange={(e) => setPayoutBankId(Number(e.target.value))}
-              required
-            >
-              <optgroup label="Bancos">
-                {colombiaBanks.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Billeteras">
-                {colombiaWallets.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
-
-          <label className="block text-sm text-zinc-400">
-            Tipo de cuenta
-            <select
-              className={`${inputClass} mt-1`}
-              value={payoutAccountType}
-              onChange={(e) => setPayoutAccountType(e.target.value as 'AHORROS' | 'CORRIENTE')}
-              required
-            >
-              {PAYOUT_ACCOUNT_TYPES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <input
-            className={inputClass}
-            value={payoutHolder}
-            onChange={(e) => setPayoutHolder(e.target.value)}
-            placeholder="Nombre del titular"
-            required
-          />
-          <input
-            className={inputClass}
-            value={payoutAccount}
-            onChange={(e) => setPayoutAccount(e.target.value)}
-            placeholder="Número de cuenta"
-            required
-          />
-          <p className="text-xs text-zinc-500">
-            Seleccionado:{' '}
-            {COLOMBIA_PAYOUT_OPTIONS.find((b) => b.id === payoutBankId)?.name ?? '—'} ·{' '}
-            {payoutAccountType === 'AHORROS' ? 'Ahorros' : 'Corriente'}
-          </p>
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl bg-vibra-pink px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
+            className="w-full rounded-xl bg-vibra-pink px-4 py-2.5 text-sm font-semibold disabled:opacity-60 sm:w-auto"
           >
-            Guardar cuenta
+            Guardar perfil
           </button>
         </form>
+      </SettingsAccordion>
+
+      {isModel ? (
+        <SettingsAccordion
+          title="Cuenta bancaria"
+          open={payoutOpen}
+          onToggle={() => {
+            setPayoutOpen((v) => !v);
+            if (!payoutOpen) setProfileOpen(false);
+          }}
+        >
+          <form className="space-y-4" onSubmit={savePayout}>
+            <p className="text-xs text-zinc-500">Bancos y billeteras de Colombia</p>
+
+            <label className="block text-sm text-zinc-400">
+              Entidad
+              <select
+                className={`${inputClass} mt-1`}
+                value={payoutBankId}
+                onChange={(e) => setPayoutBankId(Number(e.target.value))}
+                required
+              >
+                <optgroup label="Bancos">
+                  {colombiaBanks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Billeteras">
+                  {colombiaWallets.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+
+            <label className="block text-sm text-zinc-400">
+              Tipo de cuenta
+              <select
+                className={`${inputClass} mt-1`}
+                value={payoutAccountType}
+                onChange={(e) => setPayoutAccountType(e.target.value as 'AHORROS' | 'CORRIENTE')}
+                required
+              >
+                {PAYOUT_ACCOUNT_TYPES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <input
+              className={inputClass}
+              value={payoutHolder}
+              onChange={(e) => setPayoutHolder(e.target.value)}
+              placeholder="Nombre del titular"
+              required
+            />
+            <input
+              className={inputClass}
+              value={payoutAccount}
+              onChange={(e) => setPayoutAccount(e.target.value)}
+              placeholder="Número de cuenta"
+              required
+            />
+            <p className="text-xs text-zinc-500">
+              Seleccionado:{' '}
+              {COLOMBIA_PAYOUT_OPTIONS.find((b) => b.id === payoutBankId)?.name ?? '—'} ·{' '}
+              {payoutAccountType === 'AHORROS' ? 'Ahorros' : 'Corriente'}
+            </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-vibra-pink px-4 py-2.5 text-sm font-semibold disabled:opacity-60 sm:w-auto"
+            >
+              Guardar cuenta
+            </button>
+          </form>
+        </SettingsAccordion>
       ) : null}
 
       {message ? <p className="text-sm text-emerald-400">{message}</p> : null}

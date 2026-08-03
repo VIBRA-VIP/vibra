@@ -28,9 +28,11 @@ function formatPostDate(iso: string) {
 type Props = {
   post: FeedPostDto;
   onOpenProfile?: (username: string) => void;
+  /** Hide follow / profile actions (e.g. own profile). */
+  hideFollow?: boolean;
 };
 
-export function PostCard({ post, onOpenProfile }: Props) {
+export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
   const queryClient = useQueryClient();
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState(post.likedByMe);
@@ -230,26 +232,37 @@ export function PostCard({ post, onOpenProfile }: Props) {
           <MessageCircle className="pointer-events-none h-5 w-5 shrink-0" />
           <span className="pointer-events-none tabular-nums">{commentsCount}</span>
         </button>
-        <button
-          type="button"
-          disabled={followMutation.isPending}
-          onClick={() => followMutation.mutate()}
-          className={cn(
-            'relative z-10 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition',
-            following ? 'text-vibra-gold' : 'text-zinc-300 hover:text-white',
-          )}
-        >
-          <Star className={cn('pointer-events-none h-5 w-5 shrink-0', following && 'fill-current')} />
-          <span className="pointer-events-none">{following ? 'Siguiendo' : 'Seguir'}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onOpenProfile?.(post.author.username)}
-          className="relative z-10 ml-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white"
-        >
-          <UserRound className="pointer-events-none h-5 w-5 shrink-0" />
-          <span className="pointer-events-none">Perfil</span>
-        </button>
+        {!hideFollow ? (
+          <>
+            <button
+              type="button"
+              disabled={followMutation.isPending}
+              onClick={() => followMutation.mutate()}
+              className={cn(
+                'relative z-10 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm transition',
+                following ? 'text-vibra-gold' : 'text-zinc-300 hover:text-white',
+              )}
+            >
+              <Star
+                className={cn(
+                  'pointer-events-none h-5 w-5 shrink-0',
+                  following && 'fill-current',
+                )}
+              />
+              <span className="pointer-events-none">
+                {following ? 'Siguiendo' : 'Seguir'}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenProfile?.(post.author.username)}
+              className="relative z-10 ml-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white"
+            >
+              <UserRound className="pointer-events-none h-5 w-5 shrink-0" />
+              <span className="pointer-events-none">Perfil</span>
+            </button>
+          </>
+        ) : null}
       </div>
 
       <PostCommentsInline

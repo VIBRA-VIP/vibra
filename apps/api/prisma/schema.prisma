@@ -151,6 +151,7 @@ model Profile {
   gender          ProfileGender @default(FEMALE)
   birthDate       DateTime? @map("birth_date") @db.Date
   age             Int      @default(18)
+  country         String?  @db.VarChar(8)
   attributes      Json?
   services        Json?
   payoutBankId    Int?     @map("payout_bank_id")

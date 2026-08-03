@@ -9,6 +9,7 @@ import {
   LoginPage,
   OnboardingPage,
   PendingVerificationPage,
+  MyProfilePage,
   ProfilePage,
   PublishPage,
   RegisterPage,
@@ -37,6 +38,7 @@ export function AppRoutes() {
           <Route path="/requests" element={<RequestsPage />} />
           <Route path="/publish" element={<PublishPage />} />
           <Route path="/chats" element={<ChatsPage />} />
+          <Route path="/me" element={<MyProfilePage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

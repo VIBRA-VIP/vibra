@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { COUNTRIES } from '@vibra/shared';
 import { Logo, PasswordField } from '@/components';
 import { loginRequest, registerRequest } from '@/features/auth';
 import { useAuthStore } from '@/store';
@@ -123,6 +124,7 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [country, setCountry] = useState('CO');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -138,6 +140,10 @@ export function RegisterPage() {
       setError('Indica tu fecha de nacimiento');
       return;
     }
+    if (!country) {
+      setError('Indica tu país');
+      return;
+    }
     if (!acceptedTerms) {
       setError('Debes aceptar términos y confirmar que eres mayor de 18 años');
       return;
@@ -151,6 +157,7 @@ export function RegisterPage() {
         role,
         gender,
         birthDate,
+        country,
         acceptedTerms: true,
       });
       setAuth(res.user, res.accessToken, res.refreshToken);
@@ -242,6 +249,20 @@ export function RegisterPage() {
           aria-label="Fecha de nacimiento"
           className={inputClass}
         />
+
+        <select
+          required
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          aria-label="País"
+          className={inputClass}
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name}
+            </option>
+          ))}
+        </select>
 
         <label className="flex items-start gap-3 text-sm text-zinc-300">
           <input

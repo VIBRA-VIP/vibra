@@ -24,6 +24,7 @@ export interface AuthUser {
     hasIdDocument?: boolean;
     birthDate?: string | null;
     age?: number;
+    country?: string | null;
     chatPricePerMin?: number;
     videoPricePerMin?: number;
     messagePrice?: number;
@@ -52,6 +53,7 @@ export async function registerRequest(payload: {
   gender: 'FEMALE' | 'MALE';
   acceptedTerms: boolean;
   birthDate: string;
+  country: string;
   idDocumentUrl?: string;
   idDocumentBackUrl?: string;
 }) {

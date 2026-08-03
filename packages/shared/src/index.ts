@@ -246,7 +246,7 @@ export function getPayoutOptionName(id: number | null | undefined): string | nul
 }
 
 /** 1 crédito ≈ este valor en pesos colombianos (referencia para modelos y usuarios). */
-export const CREDIT_VALUE_COP = 100;
+export const CREDIT_VALUE_COP = 1500;
 
 export function creditsToCop(credits: number): number {
   const n = Number.isFinite(credits) ? Math.max(0, credits) : 0;
@@ -264,3 +264,38 @@ export function formatCop(amount: number): string {
 export function formatCreditsCopHint(credits: number): string {
   return `≈ ${formatCop(creditsToCop(credits))}`;
 }
+
+/** ISO 3166-1 alpha-2 codes used at registration (LatAm + common). */
+export const COUNTRIES = [
+  { code: 'CO', name: 'Colombia' },
+  { code: 'MX', name: 'México' },
+  { code: 'AR', name: 'Argentina' },
+  { code: 'CL', name: 'Chile' },
+  { code: 'PE', name: 'Perú' },
+  { code: 'EC', name: 'Ecuador' },
+  { code: 'VE', name: 'Venezuela' },
+  { code: 'BO', name: 'Bolivia' },
+  { code: 'PY', name: 'Paraguay' },
+  { code: 'UY', name: 'Uruguay' },
+  { code: 'BR', name: 'Brasil' },
+  { code: 'PA', name: 'Panamá' },
+  { code: 'CR', name: 'Costa Rica' },
+  { code: 'GT', name: 'Guatemala' },
+  { code: 'HN', name: 'Honduras' },
+  { code: 'SV', name: 'El Salvador' },
+  { code: 'NI', name: 'Nicaragua' },
+  { code: 'DO', name: 'República Dominicana' },
+  { code: 'CU', name: 'Cuba' },
+  { code: 'PR', name: 'Puerto Rico' },
+  { code: 'US', name: 'Estados Unidos' },
+  { code: 'ES', name: 'España' },
+  { code: 'OTHER', name: 'Otro' },
+] as const;
+
+export type CountryCode = (typeof COUNTRIES)[number]['code'];
+
+export function getCountryName(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return COUNTRIES.find((c) => c.code === code)?.name ?? code;
+}
+

@@ -1,13 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { PhotoUploader } from '@/features/media/components/photo-uploader';
-import { mediaSrc, uploadMediaFile } from '@/features/media/services/media-api';
+import { CREDIT_VALUE_COP, formatCop, formatCreditsCopHint } from '@vibra/shared';
+import {
+  PostMediaUploader,
+  type PostMediaItem,
+} from '@/features/media/components/post-media-uploader';
 import { createPostRequest } from '@/features/posts';
 import { useAuthStore } from '@/store';
 
 const inputClass =
   'w-full rounded-xl border border-vibra-border bg-vibra-muted px-4 py-3 text-sm outline-none focus:border-vibra-pink/50';
+
+const MAX_MEDIA = 8;
 
 export function PublishPage() {
   const navigate = useNavigate();
@@ -17,12 +22,12 @@ export function PublishPage() {
   const verified = user?.profile?.isVerified || user?.verificationStatus === 'APPROVED';
 
   const [text, setText] = useState('');
-  const [images, setImages] = useState<string[]>([]);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [media, setMedia] = useState<PostMediaItem[]>([]);
   const [visibility, setVisibility] = useState<'FREE' | 'PAID'>('FREE');
   const [priceCredits, setPriceCredits] = useState(user?.profile?.contentPrice ?? 100);
   const [error, setError] = useState<string | null>(null);
-  const [uploadingVideo, setUploadingVideo] = useState(false);
+
+  const safeCredits = Number.isFinite(priceCredits) ? Math.max(0, priceCredits) : 0;
 
   const publishMutation = useMutation({
     mutationFn: () =>
@@ -30,19 +35,15 @@ export function PublishPage() {
         text,
         visibility,
         priceCredits: visibility === 'PAID' ? priceCredits : undefined,
-        media: [
-          ...images.map((url) => ({ url, kind: 'IMAGE' as const })),
-          ...(videoUrl ? [{ url: videoUrl, kind: 'VIDEO' as const }] : []),
-        ],
+        media: media.map((m) => ({ url: m.url, kind: m.kind })),
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['posts'] });
       setText('');
-      setImages([]);
-      setVideoUrl(null);
+      setMedia([]);
       setVisibility('FREE');
       setError(null);
-      navigate('/requests', { replace: true });
+      navigate('/me', { replace: true });
     },
     onError: (err: unknown) => {
       const msg =
@@ -54,25 +55,19 @@ export function PublishPage() {
 
   if (!isModel) return <Navigate to="/explore" replace />;
 
-  async function onVideoPick(file: File | null) {
-    if (!file) return;
-    setError(null);
-    setUploadingVideo(true);
-    try {
-      const res = await uploadMediaFile(file, 'VIDEO');
-      setVideoUrl(res.url);
-    } catch {
-      setError('No se pudo subir el video (MP4/WEBM, máx. 40 MB)');
-    } finally {
-      setUploadingVideo(false);
-    }
-  }
-
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (images.length < 1) {
-      setError('Agrega al menos 1 imagen');
+    if (media.length < 1) {
+      setError('Agrega al menos 1 foto o video');
+      return;
+    }
+    if (media.length > MAX_MEDIA) {
+      setError(`Máximo ${MAX_MEDIA} archivos`);
+      return;
+    }
+    if (visibility === 'PAID' && safeCredits < 1) {
+      setError('Indica un precio en créditos mayor a 0');
       return;
     }
     publishMutation.mutate();
@@ -83,7 +78,8 @@ export function PublishPage() {
       <div className="text-left">
         <h1 className="font-display text-2xl font-bold md:text-3xl">Publicar</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Comparte fotos y un video opcional. El contenido de pago se muestra borroso.
+          Hasta {MAX_MEDIA} fotos o videos en una sola publicación. El contenido de pago se muestra
+          borroso.
         </p>
       </div>
 
@@ -94,6 +90,18 @@ export function PublishPage() {
       ) : null}
 
       <form className="max-w-xl space-y-5" onSubmit={onSubmit}>
+        <div className="space-y-2">
+          <p className="text-sm text-zinc-400">
+            Contenido ({media.length}/{MAX_MEDIA})
+          </p>
+          <PostMediaUploader
+            items={media}
+            onChange={setMedia}
+            max={MAX_MEDIA}
+            disabled={!verified}
+          />
+        </div>
+
         <textarea
           className={inputClass}
           rows={4}
@@ -102,48 +110,6 @@ export function PublishPage() {
           onChange={(e) => setText(e.target.value)}
           placeholder="Escribe algo..."
         />
-
-        <div className="space-y-2">
-          <p className="text-sm text-zinc-400">Imágenes (hasta 10)</p>
-          <PhotoUploader
-            photos={images}
-            onChange={setImages}
-            max={10}
-            type="GALLERY"
-            label="Agregar foto"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm text-zinc-400">Video opcional</p>
-          {videoUrl ? (
-            <div className="space-y-2">
-              <video
-                src={mediaSrc(videoUrl)}
-                controls
-                className="max-h-56 w-full rounded-xl bg-black object-contain"
-              />
-              <button
-                type="button"
-                onClick={() => setVideoUrl(null)}
-                className="text-sm text-zinc-400 underline"
-              >
-                Quitar video
-              </button>
-            </div>
-          ) : (
-            <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-vibra-border bg-vibra-muted/40 px-4 py-6 text-sm text-zinc-400">
-              {uploadingVideo ? 'Subiendo...' : 'Elegir video (MP4/WEBM)'}
-              <input
-                type="file"
-                accept="video/mp4,video/webm"
-                className="hidden"
-                disabled={uploadingVideo || !verified}
-                onChange={(e) => void onVideoPick(e.target.files?.[0] ?? null)}
-              />
-            </label>
-          )}
-        </div>
 
         <div className="grid grid-cols-2 gap-2">
           {(
@@ -168,23 +134,31 @@ export function PublishPage() {
         </div>
 
         {visibility === 'PAID' ? (
-          <label className="block text-sm text-zinc-400">
-            Precio (créditos)
-            <input
-              type="number"
-              min={1}
-              className={`${inputClass} mt-1`}
-              value={priceCredits}
-              onChange={(e) => setPriceCredits(Number(e.target.value))}
-            />
-          </label>
+          <div>
+            <label className="block text-sm text-zinc-400">
+              Precio (créditos)
+              <input
+                type="number"
+                min={1}
+                className={`${inputClass} mt-1`}
+                value={Number.isFinite(priceCredits) ? priceCredits : 0}
+                onChange={(e) => setPriceCredits(Number(e.target.value))}
+              />
+            </label>
+            <p className="mt-1.5 text-sm font-medium text-vibra-gold">
+              {safeCredits} créditos · {formatCreditsCopHint(safeCredits)}
+            </p>
+            <p className="mt-0.5 text-[11px] text-zinc-500">
+              1 crédito ≈ {formatCop(CREDIT_VALUE_COP)} · lo que ganarías por desbloqueo
+            </p>
+          </div>
         ) : null}
 
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
         <button
           type="submit"
-          disabled={!verified || publishMutation.isPending || uploadingVideo}
+          disabled={!verified || publishMutation.isPending}
           className="w-full rounded-xl bg-vibra-pink py-3 text-sm font-semibold disabled:opacity-60"
         >
           {publishMutation.isPending ? 'Publicando...' : 'Publicar'}

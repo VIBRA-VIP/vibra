@@ -9,6 +9,7 @@ import {
   Settings,
   Inbox,
   PlusSquare,
+  UserRound,
   Users,
 } from 'lucide-react';
 import { AppVersion, Logo } from '@/components';
@@ -127,6 +128,7 @@ export function AppShell() {
         { to: '/publish', label: 'Publicar', icon: PlusSquare },
         { to: '/chats', label: 'Chats', icon: MessageCircle, badge: chatBadge },
         { to: '/settings', label: 'Ajustes', icon: Settings },
+        { to: '/me', label: 'Mi perfil', icon: UserRound },
       ]
     : [
         { to: '/explore', label: 'Explorar', icon: Compass },
@@ -163,16 +165,25 @@ export function AppShell() {
           <Logo to={homeTo} />
         </div>
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
-          {nav.map((item) => (
+          {nav.map((item) => {
+            const profilePath = user?.profile?.username
+              ? `/profile/${user.profile.username}`
+              : null;
+            return (
             <NavLink
               key={item.label}
               to={item.to}
-              className={({ isActive }) =>
-                cn(
+              className={({ isActive }) => {
+                const active =
+                  item.to === '/me'
+                    ? isActive ||
+                      (profilePath != null && location.pathname === profilePath)
+                    : isActive;
+                return cn(
                   'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-white/5 hover:text-white',
-                  isActive && 'bg-white/5 text-white',
-                )
-              }
+                  active && 'bg-white/5 text-white',
+                );
+              }}
             >
               <item.icon className="h-5 w-5" />
               <span className="flex-1">{item.label}</span>
@@ -182,7 +193,8 @@ export function AppShell() {
                 </span>
               ) : null}
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
         <div className="shrink-0 space-y-3 border-t border-vibra-border p-4">
           {!isModel ? (
@@ -209,21 +221,32 @@ export function AppShell() {
             </div>
           )}
           <div className="flex items-center gap-3 rounded-lg px-1 py-2">
-            {avatarUrl ? (
-              <img
-                src={mediaSrc(avatarUrl)}
-                alt={displayName}
-                className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-vibra-border"
-              />
-            ) : (
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold">
-                {initial}
+            <button
+              type="button"
+              className={cn(
+                'flex min-w-0 flex-1 items-center gap-3 text-left',
+                isModel && 'rounded-lg hover:bg-white/5',
+              )}
+              onClick={() => {
+                if (isModel) navigate('/me');
+              }}
+            >
+              {avatarUrl ? (
+                <img
+                  src={mediaSrc(avatarUrl)}
+                  alt={displayName}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-vibra-border"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold">
+                  {initial}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{displayName}</p>
+                <p className="text-xs text-vibra-pink">{isModel ? 'Modelo' : 'Usuario'}</p>
               </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-vibra-pink">{isModel ? 'Modelo' : 'Usuario'}</p>
-            </div>
+            </button>
             <button
               type="button"
               onClick={() => void handleLogout()}
@@ -242,16 +265,25 @@ export function AppShell() {
           <Outlet />
         </main>
         <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-vibra-border bg-vibra-elevated/95 backdrop-blur md:hidden">
-          {nav.map((item) => (
+          {nav.map((item) => {
+            const profilePath = user?.profile?.username
+              ? `/profile/${user.profile.username}`
+              : null;
+            return (
             <NavLink
               key={item.label}
               to={item.to}
-              className={({ isActive }) =>
-                cn(
+              className={({ isActive }) => {
+                const active =
+                  item.to === '/me'
+                    ? isActive ||
+                      (profilePath != null && location.pathname === profilePath)
+                    : isActive;
+                return cn(
                   'relative flex flex-1 flex-col items-center gap-1 py-3 text-xs text-zinc-500',
-                  isActive && 'text-vibra-pink',
-                )
-              }
+                  active && 'text-vibra-pink',
+                );
+              }}
             >
               <span className="relative">
                 <item.icon className="h-5 w-5" />
@@ -263,7 +295,8 @@ export function AppShell() {
               </span>
               {item.label}
             </NavLink>
-          ))}
+            );
+          })}
         </nav>
         {!onChats && unreadTotal > 0 ? (
           <span className="sr-only" aria-live="polite">
