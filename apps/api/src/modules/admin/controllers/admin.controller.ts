@@ -18,6 +18,12 @@ export class AdminController {
   }
 
   @UseGuards(AdminAuthGuard)
+  @Get('dashboard')
+  dashboard() {
+    return this.adminService.getDashboard();
+  }
+
+  @UseGuards(AdminAuthGuard)
   @Get('models/pending')
   listPending() {
     return this.adminService.listPendingModels();

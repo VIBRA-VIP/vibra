@@ -10,8 +10,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UserRole, VerificationStatus } from '@prisma/client';
+import { ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
+import { statfs } from 'node:fs/promises';
+import * as os from 'node:os';
 import { PrismaService } from '../../../database/prisma.service';
 import type { Env } from '../../../config/env.schema';
 import { MailService } from '../../mail/mail.service';
@@ -195,6 +198,232 @@ export class AdminService implements OnModuleInit, OnModuleDestroy {
       verificationStatus: result.verificationStatus,
       isVerified: result.isVerified,
     };
+  }
+
+  async getDashboard() {
+    const [users, system, s3, uploadsDisk] = await Promise.all([
+      this.userStats(),
+      Promise.resolve(this.systemStats()),
+      this.s3Stats(),
+      this.uploadsDiskStats(),
+    ]);
+
+    return {
+      generatedAt: new Date().toISOString(),
+      users,
+      system,
+      disk: uploadsDisk,
+      s3,
+    };
+  }
+
+  private async userStats() {
+    const now = new Date();
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const twelveMonthsAgo = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1),
+    );
+
+    const [
+      totalUsers,
+      totalClients,
+      totalModels,
+      activeUsers,
+      newThisMonth,
+      newLast30Days,
+      modelsPending,
+      modelsApproved,
+      modelsRejected,
+      recentUsers,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { role: UserRole.CLIENT } }),
+      this.prisma.user.count({ where: { role: UserRole.MODEL } }),
+      this.prisma.user.count({ where: { isActive: true } }),
+      this.prisma.user.count({ where: { createdAt: { gte: startOfMonth } } }),
+      this.prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+      this.prisma.profile.count({
+        where: {
+          verificationStatus: VerificationStatus.PENDING,
+          user: { role: UserRole.MODEL },
+        },
+      }),
+      this.prisma.profile.count({
+        where: {
+          verificationStatus: VerificationStatus.APPROVED,
+          user: { role: UserRole.MODEL },
+        },
+      }),
+      this.prisma.profile.count({
+        where: {
+          verificationStatus: VerificationStatus.REJECTED,
+          user: { role: UserRole.MODEL },
+        },
+      }),
+      this.prisma.user.findMany({
+        where: { createdAt: { gte: twelveMonthsAgo } },
+        select: { createdAt: true, role: true },
+      }),
+    ]);
+
+    const monthKey = (d: Date) =>
+      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+
+    const months: { month: string; total: number; clients: number; models: number }[] = [];
+    for (let i = 11; i >= 0; i -= 1) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      months.push({ month: monthKey(d), total: 0, clients: 0, models: 0 });
+    }
+    const byMonth = new Map(months.map((m) => [m.month, m]));
+    for (const u of recentUsers) {
+      const key = monthKey(u.createdAt);
+      const row = byMonth.get(key);
+      if (!row) continue;
+      row.total += 1;
+      if (u.role === UserRole.CLIENT) row.clients += 1;
+      if (u.role === UserRole.MODEL) row.models += 1;
+    }
+
+    return {
+      totalUsers,
+      totalClients,
+      totalModels,
+      activeUsers,
+      newThisMonth,
+      newLast30Days,
+      modelsPending,
+      modelsApproved,
+      modelsRejected,
+      monthly: months,
+    };
+  }
+
+  private systemStats() {
+    const cpus = os.cpus();
+    const load = os.loadavg();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+
+    return {
+      hostname: os.hostname(),
+      platform: os.platform(),
+      uptimeSec: Math.round(os.uptime()),
+      cpuCount: cpus.length,
+      cpuModel: cpus[0]?.model?.trim() ?? 'unknown',
+      loadAvg1: Number(load[0]?.toFixed(2) ?? 0),
+      loadAvg5: Number(load[1]?.toFixed(2) ?? 0),
+      loadAvg15: Number(load[2]?.toFixed(2) ?? 0),
+      /** Rough CPU pressure: 1-min load / cores (0–1+). */
+      cpuUsageRatio: cpus.length
+        ? Number(((load[0] ?? 0) / cpus.length).toFixed(3))
+        : 0,
+      memory: {
+        totalBytes: totalMem,
+        usedBytes: usedMem,
+        freeBytes: freeMem,
+        usedRatio: totalMem ? Number((usedMem / totalMem).toFixed(3)) : 0,
+      },
+    };
+  }
+
+  private async uploadsDiskStats() {
+    const targets = ['/app/uploads', process.cwd(), '/'];
+    for (const target of targets) {
+      try {
+        const s = await statfs(target);
+        const totalBytes = Number(s.blocks) * Number(s.bsize);
+        const freeBytes = Number(s.bfree) * Number(s.bsize);
+        const availableBytes = Number(s.bavail) * Number(s.bsize);
+        const usedBytes = totalBytes - freeBytes;
+        return {
+          path: target,
+          totalBytes,
+          usedBytes,
+          freeBytes,
+          availableBytes,
+          usedRatio: totalBytes ? Number((usedBytes / totalBytes).toFixed(3)) : 0,
+        };
+      } catch {
+        // try next path
+      }
+    }
+    return {
+      path: null as string | null,
+      totalBytes: 0,
+      usedBytes: 0,
+      freeBytes: 0,
+      availableBytes: 0,
+      usedRatio: 0,
+      error: 'No se pudo leer el disco',
+    };
+  }
+
+  private async s3Stats() {
+    const bucket = this.config.get('S3_BUCKET', { infer: true });
+    const region = this.config.get('S3_REGION', { infer: true }) ?? 'us-east-2';
+    const accessKeyId = this.config.get('AWS_ACCESS_KEY_ID', { infer: true });
+    const secretAccessKey = this.config.get('AWS_SECRET_ACCESS_KEY', { infer: true });
+
+    if (!bucket || !accessKeyId || !secretAccessKey) {
+      return {
+        configured: false,
+        bucket: bucket ?? null,
+        region,
+        objectCount: 0,
+        totalBytes: 0,
+        error: 'S3 no configurado',
+      };
+    }
+
+    try {
+      const s3 = new S3Client({
+        region,
+        credentials: { accessKeyId, secretAccessKey },
+      });
+
+      let continuationToken: string | undefined;
+      let objectCount = 0;
+      let totalBytes = 0;
+      let pages = 0;
+      const maxPages = 50; // safety cap (~50k objects listed)
+
+      do {
+        const res = await s3.send(
+          new ListObjectsV2Command({
+            Bucket: bucket,
+            ContinuationToken: continuationToken,
+            MaxKeys: 1000,
+          }),
+        );
+        for (const obj of res.Contents ?? []) {
+          objectCount += 1;
+          totalBytes += obj.Size ?? 0;
+        }
+        continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+        pages += 1;
+      } while (continuationToken && pages < maxPages);
+
+      return {
+        configured: true,
+        bucket,
+        region,
+        objectCount,
+        totalBytes,
+        truncated: Boolean(continuationToken),
+      };
+    } catch (err) {
+      this.logger.error('S3 stats failed', err);
+      return {
+        configured: true,
+        bucket,
+        region,
+        objectCount: 0,
+        totalBytes: 0,
+        error: err instanceof Error ? err.message : 'Error al leer S3',
+      };
+    }
   }
 
   private async setVerification(
