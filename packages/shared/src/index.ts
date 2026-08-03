@@ -265,6 +265,22 @@ export function formatCreditsCopHint(credits: number): string {
   return `≈ ${formatCop(creditsToCop(credits))}`;
 }
 
+/**
+ * Max videocall price (créditos/min) by follower tiers:
+ * 0–999 → 5, 1000–1999 → 10, 2000–2999 → 15, …
+ */
+export function maxVideoPricePerMin(followersCount: number): number {
+  const n = Number.isFinite(followersCount) ? Math.max(0, Math.floor(followersCount)) : 0;
+  return 5 * (1 + Math.floor(n / 1000));
+}
+
+export function clampVideoPricePerMin(price: number, followersCount: number): number {
+  const max = maxVideoPricePerMin(followersCount);
+  const n = Number.isFinite(price) ? Math.round(price) : 0;
+  return Math.min(max, Math.max(1, n));
+}
+
+
 /** ISO 3166-1 alpha-2 codes used at registration (LatAm + common). */
 export const COUNTRIES = [
   { code: 'CO', name: 'Colombia' },

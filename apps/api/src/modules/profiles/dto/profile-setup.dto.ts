@@ -42,6 +42,11 @@ export class CompleteProfileDto {
   avatarUrl?: string;
 
   @IsOptional()
+  @IsString()
+  @Matches(MEDIA_URL)
+  bannerUrl?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @Matches(MEDIA_URL, { each: true })

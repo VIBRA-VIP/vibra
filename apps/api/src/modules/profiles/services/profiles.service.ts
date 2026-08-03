@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MediaType, ProfileGender, UserRole, VerificationStatus } from '@prisma/client';
+import { maxVideoPricePerMin } from '@vibra/shared';
 import { PrismaService } from '../../../database/prisma.service';
 import type {
   CompleteProfileDto,
@@ -26,7 +27,10 @@ export class ProfilesService {
       where: { userId, type: MediaType.GALLERY },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
-    return { ...this.mapProfile(profile), gallery };
+    const followersCount = await this.prisma.favorite.count({
+      where: { modelId: userId },
+    });
+    return { ...this.mapProfile(profile), gallery, followersCount };
   }
 
   async completeProfile(userId: string, dto: CompleteProfileDto) {
@@ -40,8 +44,13 @@ export class ProfilesService {
     const galleryUrls = dto.galleryUrls ?? [];
 
     if (isModel) {
-      if (galleryUrls.length < 1 || galleryUrls.length > 8) {
-        throw new BadRequestException('Las modelos deben subir entre 1 y 8 fotos');
+      const hasAvatar = Boolean(dto.avatarUrl?.trim() || user.profile.avatarUrl);
+      const hasBanner = Boolean(dto.bannerUrl?.trim() || user.profile.bannerUrl);
+      if (!hasAvatar) {
+        throw new BadRequestException('Agrega tu foto de perfil');
+      }
+      if (!hasBanner) {
+        throw new BadRequestException('Agrega tu portada');
       }
       const idFront = dto.idDocumentUrl?.trim() || user.profile.idDocumentUrl;
       const idBack = dto.idDocumentBackUrl?.trim() || user.profile.idDocumentBackUrl;
@@ -55,6 +64,7 @@ export class ProfilesService {
     }
 
     const avatarUrl = dto.avatarUrl ?? galleryUrls[0] ?? user.profile.avatarUrl ?? undefined;
+    const bannerUrl = dto.bannerUrl?.trim() || user.profile.bannerUrl || undefined;
     const idDocumentUrl =
       isModel
         ? (dto.idDocumentUrl?.trim() || user.profile.idDocumentUrl || undefined)
@@ -100,6 +110,19 @@ export class ProfilesService {
       });
     }
 
+    if (bannerUrl) {
+      await this.prisma.media.deleteMany({ where: { userId, type: MediaType.BANNER } });
+      await this.prisma.media.create({
+        data: {
+          userId,
+          type: MediaType.BANNER,
+          url: bannerUrl,
+          key: `banners/${userId}/main`,
+          sortOrder: 0,
+        },
+      });
+    }
+
     if (idDocumentUrl || idDocumentBackUrl) {
       await this.prisma.media.deleteMany({ where: { userId, type: MediaType.ID_DOCUMENT } });
       if (idDocumentUrl) {
@@ -127,6 +150,11 @@ export class ProfilesService {
     }
 
     const markingComplete = dto.markCompleted !== false;
+    let videoPricePerMin = user.profile.videoPricePerMin;
+    if (isModel && dto.videoPricePerMin != null) {
+      videoPricePerMin = await this.resolveVideoPricePerMin(userId, dto.videoPricePerMin);
+    }
+
     const profile = await this.prisma.profile.update({
       where: { userId },
       data: {
@@ -134,15 +162,14 @@ export class ProfilesService {
         tags: dto.tags ?? user.profile.tags,
         attributes: (dto.attributes ?? user.profile.attributes) as object | undefined,
         avatarUrl: avatarUrl ?? user.profile.avatarUrl,
+        bannerUrl: bannerUrl ?? user.profile.bannerUrl,
         birthDate,
         age,
         messagePrice: isModel ? (dto.messagePrice ?? user.profile.messagePrice) : user.profile.messagePrice,
         chatPricePerMin: isModel
           ? (dto.chatPricePerMin ?? user.profile.chatPricePerMin)
           : user.profile.chatPricePerMin,
-        videoPricePerMin: isModel
-          ? (dto.videoPricePerMin ?? user.profile.videoPricePerMin)
-          : user.profile.videoPricePerMin,
+        videoPricePerMin: isModel ? videoPricePerMin : user.profile.videoPricePerMin,
         contentPrice: isModel
           ? (dto.contentPrice ?? user.profile.contentPrice)
           : user.profile.contentPrice,
@@ -245,6 +272,11 @@ export class ProfilesService {
       });
     }
 
+    let videoPricePerMin = dto.videoPricePerMin;
+    if (dto.videoPricePerMin != null) {
+      videoPricePerMin = await this.resolveVideoPricePerMin(userId, dto.videoPricePerMin);
+    }
+
     const updated = await this.prisma.profile.update({
       where: { userId },
       data: {
@@ -255,7 +287,7 @@ export class ProfilesService {
         attributes: dto.attributes as object | undefined,
         messagePrice: dto.messagePrice,
         chatPricePerMin: dto.chatPricePerMin,
-        videoPricePerMin: dto.videoPricePerMin,
+        videoPricePerMin,
         contentPrice: dto.contentPrice,
         acceptsEncounters: dto.acceptsEncounters,
       },
@@ -642,6 +674,22 @@ export class ProfilesService {
       payoutAccount: p.payoutAccount,
       payoutHolder: p.payoutHolder,
     };
+  }
+
+  private async resolveVideoPricePerMin(userId: string, price: number): Promise<number> {
+    const followersCount = await this.prisma.favorite.count({
+      where: { modelId: userId },
+    });
+    const max = maxVideoPricePerMin(followersCount);
+    if (!Number.isFinite(price) || price < 1) {
+      throw new BadRequestException('El precio de videollamada debe ser al menos 1 crédito');
+    }
+    if (price > max) {
+      throw new BadRequestException(
+        `Con ${followersCount} seguidores el máximo de videollamada es ${max} créd/min`,
+      );
+    }
+    return Math.round(price);
   }
 }
 

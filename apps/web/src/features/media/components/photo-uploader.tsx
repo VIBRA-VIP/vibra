@@ -89,7 +89,7 @@ export function PhotoUploader({
     const url = photos[0];
     const busy = busyIndex !== null;
     return (
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-start gap-3">
         <button
           type="button"
           disabled={busy}
@@ -132,7 +132,7 @@ export function PhotoUploader({
           onChange={onInputChange}
         />
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
-        <p className="text-center text-xs text-zinc-500">
+        <p className="text-left text-xs text-zinc-500">
           JPG, PNG, WEBP o GIF · máx. 8 MB
         </p>
       </div>

@@ -99,7 +99,8 @@ export function OnboardingPage() {
 
   const [bio, setBio] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
   const [breastSize, setBreastSize] = useState('medianos');
   const [buttType, setButtType] = useState('normal');
   const [bodyBuild, setBodyBuild] = useState('atletico');
@@ -108,7 +109,7 @@ export function OnboardingPage() {
   const [usePenisCm, setUsePenisCm] = useState(false);
   const [skinTone, setSkinTone] = useState('media');
   const [hair, setHair] = useState('liso');
-  const [videoPricePerMin, setVideoPricePerMin] = useState(80);
+  const [videoPricePerMin, setVideoPricePerMin] = useState(1);
   const [idDocumentUrls, setIdDocumentUrls] = useState<string[]>([]);
   const [idDocumentBackUrls, setIdDocumentBackUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -136,16 +137,20 @@ export function OnboardingPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    const urls = photoUrls.map((u) => u.trim()).filter(Boolean);
-    if (isModel && (urls.length < 1 || urls.length > 8)) {
-      setError('Sube entre 1 y 8 fotos de perfil/galería');
-      return;
-    }
-    if (isModel && (idDocumentUrls.length < 1 || idDocumentBackUrls.length < 1)) {
-      setError('Sube el frente y el reverso de tu documento de identidad');
-      return;
-    }
-    if (!isModel && urls.length < 1) {
+    if (isModel) {
+      if (!avatarUrl.trim()) {
+        setError('Agrega tu foto de perfil');
+        return;
+      }
+      if (!bannerUrl.trim()) {
+        setError('Agrega tu portada');
+        return;
+      }
+      if (idDocumentUrls.length < 1 || idDocumentBackUrls.length < 1) {
+        setError('Sube el frente y el reverso de tu documento de identidad');
+        return;
+      }
+    } else if (!avatarUrl.trim()) {
       setError('Agrega 1 foto de perfil');
       return;
     }
@@ -175,8 +180,8 @@ export function OnboardingPage() {
       await completeProfileRequest({
         bio,
         tags: isModel ? tags : [],
-        avatarUrl: urls[0],
-        galleryUrls: isModel ? urls : [urls[0]],
+        avatarUrl: avatarUrl.trim(),
+        bannerUrl: isModel ? bannerUrl.trim() : undefined,
         attributes,
         videoPricePerMin: isModel ? videoPricePerMin : undefined,
         idDocumentUrl: isModel ? idDocumentUrls[0] : undefined,
@@ -211,17 +216,46 @@ export function OnboardingPage() {
       </p>
 
       <form className="mt-8 space-y-8" method="post" onSubmit={onSubmit}>
-        <section className="space-y-3">
-          <h2 className="font-display text-lg font-semibold">
-            {isModel ? 'Fotos (1 a 8)' : 'Foto de perfil'}
-          </h2>
-          <PhotoUploader
-            photos={photoUrls}
-            onChange={setPhotoUrls}
-            max={isModel ? 8 : 1}
-            type="GALLERY"
-            label={isModel ? 'Agregar foto' : 'Elegir foto'}
-          />
+        <section className="space-y-5">
+          {isModel ? (
+            <>
+              <div className="space-y-2">
+                <h2 className="font-display text-lg font-semibold">Portada</h2>
+                <p className="text-sm text-zinc-400">Imagen ancha que se ve arriba en tu perfil.</p>
+                <PhotoUploader
+                  photos={bannerUrl ? [bannerUrl] : []}
+                  onChange={(urls) => setBannerUrl(urls[0] ?? '')}
+                  max={1}
+                  type="BANNER"
+                  label="Agregar portada"
+                />
+              </div>
+              <div className="space-y-2">
+                <h2 className="font-display text-lg font-semibold">Foto de perfil</h2>
+                <p className="text-sm text-zinc-400">Tu foto principal en el avatar.</p>
+                <PhotoUploader
+                  photos={avatarUrl ? [avatarUrl] : []}
+                  onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
+                  max={1}
+                  type="AVATAR"
+                  variant="avatar"
+                  label="Elegir foto"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <h2 className="font-display text-lg font-semibold">Foto de perfil</h2>
+              <PhotoUploader
+                photos={avatarUrl ? [avatarUrl] : []}
+                onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
+                max={1}
+                type="AVATAR"
+                variant="avatar"
+                label="Elegir foto"
+              />
+            </div>
+          )}
         </section>
 
         <section className="space-y-3">
@@ -354,6 +388,7 @@ export function OnboardingPage() {
             <ModelPricingFields
               videoPricePerMin={videoPricePerMin}
               onVideoPricePerMin={setVideoPricePerMin}
+              followersCount={0}
             />
 
             <section className="space-y-3">

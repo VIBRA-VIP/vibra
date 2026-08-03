@@ -142,7 +142,7 @@ model Profile {
   rating          Float    @default(0)
   ratingCount     Int      @default(0) @map("rating_count")
   chatPricePerMin Int      @default(15) @map("chat_price_per_min")
-  videoPricePerMin Int     @default(80) @map("video_price_per_min")
+  videoPricePerMin Int     @default(1) @map("video_price_per_min")
   messagePrice    Int      @default(10) @map("message_price")
   contentPrice    Int      @default(100) @map("content_price")
   acceptsEncounters Boolean @default(false) @map("accepts_encounters")

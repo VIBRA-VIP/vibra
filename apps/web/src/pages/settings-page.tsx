@@ -4,6 +4,7 @@ import { ChevronDown, LogOut } from 'lucide-react';
 import {
   COLOMBIA_PAYOUT_OPTIONS,
   PAYOUT_ACCOUNT_TYPES,
+  clampVideoPricePerMin,
   colombiaBanks,
   colombiaWallets,
 } from '@vibra/shared';
@@ -68,7 +69,10 @@ export function SettingsPage() {
 
   const [bio, setBio] = useState(user?.profile?.bio ?? '');
   const [avatarUrl, setAvatarUrl] = useState(user?.profile?.avatarUrl ?? '');
-  const [videoPricePerMin, setVideoPricePerMin] = useState(user?.profile?.videoPricePerMin ?? 80);
+  const [videoPricePerMin, setVideoPricePerMin] = useState(
+    clampVideoPricePerMin(user?.profile?.videoPricePerMin ?? 1, 0),
+  );
+  const [followersCount, setFollowersCount] = useState(0);
   const [payoutBankId, setPayoutBankId] = useState<number>(user?.profile?.payoutBankId ?? 1);
   const [payoutAccountType, setPayoutAccountType] = useState<'AHORROS' | 'CORRIENTE'>(
     (user?.profile?.payoutAccountType as 'AHORROS' | 'CORRIENTE') ?? 'AHORROS',
@@ -84,7 +88,11 @@ export function SettingsPage() {
       .then((profile: Record<string, unknown>) => {
         setBio(String(profile.bio ?? ''));
         setAvatarUrl(String(profile.avatarUrl ?? ''));
-        setVideoPricePerMin(Number(profile.videoPricePerMin ?? 80));
+        const followers = Number(profile.followersCount ?? 0);
+        setFollowersCount(followers);
+        setVideoPricePerMin(
+          clampVideoPricePerMin(Number(profile.videoPricePerMin ?? 1), followers),
+        );
         setPayoutBankId(Number(profile.payoutBankId ?? 1));
         setPayoutAccountType(
           (profile.payoutAccountType as 'AHORROS' | 'CORRIENTE') ?? 'AHORROS',
@@ -104,7 +112,9 @@ export function SettingsPage() {
       await updateSettingsRequest({
         bio,
         avatarUrl: avatarUrl || undefined,
-        videoPricePerMin: isModel ? videoPricePerMin : undefined,
+        videoPricePerMin: isModel
+          ? clampVideoPricePerMin(videoPricePerMin, followersCount)
+          : undefined,
       });
       const me = await meRequest();
       setUser(me);
@@ -180,7 +190,7 @@ export function SettingsPage() {
         <form className="space-y-4" onSubmit={saveProfile}>
           {isModel ? null : (
             <div className="space-y-2">
-              <p className="text-center text-sm text-zinc-400">Foto de perfil</p>
+              <p className="text-sm text-zinc-400">Foto de perfil</p>
               <PhotoUploader
                 photos={avatarUrl ? [avatarUrl] : []}
                 onChange={(urls) => setAvatarUrl(urls[0] ?? '')}
@@ -206,6 +216,7 @@ export function SettingsPage() {
             <ModelPricingFields
               videoPricePerMin={videoPricePerMin}
               onVideoPricePerMin={setVideoPricePerMin}
+              followersCount={followersCount}
             />
           ) : null}
 
