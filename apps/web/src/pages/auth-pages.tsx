@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { COUNTRIES } from '@vibra/shared';
+import { COUNTRIES, getCountryFlagEmoji, getCountryFlagUrl, getCountryName } from '@vibra/shared';
 import { Logo, PasswordField } from '@/components';
 import { loginRequest, registerRequest } from '@/features/auth';
 import { useAuthStore } from '@/store';
@@ -250,19 +250,40 @@ export function RegisterPage() {
           className={inputClass}
         />
 
-        <select
-          required
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          aria-label="País"
-          className={inputClass}
-        >
-          {COUNTRIES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <div className="space-y-2">
+          <p className="text-sm text-zinc-400">País</p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-vibra-border bg-vibra-muted">
+              {getCountryFlagUrl(country, 80) ? (
+                <img
+                  src={getCountryFlagUrl(country, 80)!}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-2xl" aria-hidden>
+                  {getCountryFlagEmoji(country)}
+                </span>
+              )}
+            </div>
+            <select
+              required
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              aria-label="País"
+              className={inputClass}
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {getCountryFlagEmoji(c.code)} {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-xs text-zinc-500">
+            {getCountryFlagEmoji(country)} {getCountryName(country)}
+          </p>
+        </div>
 
         <label className="flex items-start gap-3 text-sm text-zinc-300">
           <input

@@ -25,13 +25,6 @@ const features = [
   },
 ];
 
-const stats = [
-  { value: '10K+', label: 'Modelos activas' },
-  { value: '50K+', label: 'Videollamadas diarias' },
-  { value: '100K+', label: 'Mensajes enviados' },
-  { value: '100%', label: 'Privacidad garantizada' },
-];
-
 export function LandingPage() {
   return (
     <>
@@ -85,16 +78,45 @@ export function LandingPage() {
             </div>
             <ul className="space-y-3">
               {[
-                { name: 'Camila', service: 'Videollamada', price: '80 créditos/min' },
-                { name: 'Valentina', service: 'Chat privado', price: '15 créditos/min' },
-                { name: 'Isabella', service: 'Videollamada', price: '90 créditos/min' },
-                { name: 'Daniela', service: 'Chat privado', price: '20 créditos/min' },
+                {
+                  name: 'Camila',
+                  service: 'Videollamada',
+                  price: '3 créditos/min',
+                  image:
+                    'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=200&h=200&q=80',
+                },
+                {
+                  name: 'Valentina',
+                  service: 'Chat privado',
+                  price: '2 créditos/min',
+                  image:
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&h=200&q=80',
+                },
+                {
+                  name: 'Isabella',
+                  service: 'Videollamada',
+                  price: '4 créditos/min',
+                  image:
+                    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&h=200&q=80',
+                },
+                {
+                  name: 'Daniela',
+                  service: 'Chat privado',
+                  price: '1 crédito/min',
+                  image:
+                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&h=200&q=80',
+                },
               ].map((model) => (
                 <li
                   key={model.name}
                   className="flex items-center gap-3 rounded-xl border border-vibra-border/80 bg-vibra-muted/60 px-3 py-3"
                 >
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-vibra-pink/40 to-zinc-700" />
+                  <img
+                    src={model.image}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-white/10"
+                    loading="lazy"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">
                       {model.name}{' '}
@@ -104,7 +126,7 @@ export function LandingPage() {
                       {model.service} · {model.price}
                     </p>
                   </div>
-                  <span className="h-2 w-2 rounded-full bg-vibra-online" />
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-vibra-online" />
                 </li>
               ))}
             </ul>
@@ -131,10 +153,10 @@ export function LandingPage() {
       </section>
 
       <section id="seguridad" className="border-t border-vibra-border/60 py-16">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 lg:grid-cols-2 lg:items-center">
-          <div>
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="max-w-2xl">
             <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              Miles de modelos te están esperando
+              Modelos verificadas te esperan
             </h2>
             <p className="mt-4 text-zinc-400">
               Explora perfiles verificados, filtra por disponibilidad y empieza a conversar en
@@ -146,17 +168,6 @@ export function LandingPage() {
             >
               Explorar modelos
             </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-2xl border border-vibra-border bg-vibra-elevated p-5"
-              >
-                <p className="font-display text-3xl font-bold text-white">{stat.value}</p>
-                <p className="mt-1 text-sm text-zinc-400">{stat.label}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>

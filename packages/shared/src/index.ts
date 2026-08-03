@@ -225,8 +225,6 @@ export const colombiaBanks = [
 export const colombiaWallets = [
   { id: 26, name: 'Nequi' },
   { id: 27, name: 'Daviplata' },
-  { id: 28, name: 'Dale!' },
-  { id: 29, name: 'Ualá' },
   { id: 30, name: 'RappiPay' },
 ] as const;
 
@@ -265,10 +263,6 @@ export function formatCreditsCopHint(credits: number): string {
   return `≈ ${formatCop(creditsToCop(credits))}`;
 }
 
-/**
- * Max videocall price (créditos/min) by follower tiers:
- * 0–999 → 5, 1000–1999 → 10, 2000–2999 → 15, …
- */
 export function maxVideoPricePerMin(followersCount: number): number {
   const n = Number.isFinite(followersCount) ? Math.max(0, Math.floor(followersCount)) : 0;
   return 5 * (1 + Math.floor(n / 1000));
@@ -280,8 +274,6 @@ export function clampVideoPricePerMin(price: number, followersCount: number): nu
   return Math.min(max, Math.max(1, n));
 }
 
-
-/** ISO 3166-1 alpha-2 codes used at registration (LatAm + common). */
 export const COUNTRIES = [
   { code: 'CO', name: 'Colombia' },
   { code: 'MX', name: 'México' },
@@ -304,8 +296,7 @@ export const COUNTRIES = [
   { code: 'CU', name: 'Cuba' },
   { code: 'PR', name: 'Puerto Rico' },
   { code: 'US', name: 'Estados Unidos' },
-  { code: 'ES', name: 'España' },
-  { code: 'OTHER', name: 'Otro' },
+  { code: 'ES', name: 'España' }
 ] as const;
 
 export type CountryCode = (typeof COUNTRIES)[number]['code'];
@@ -313,5 +304,26 @@ export type CountryCode = (typeof COUNTRIES)[number]['code'];
 export function getCountryName(code: string | null | undefined): string | null {
   if (!code) return null;
   return COUNTRIES.find((c) => c.code === code)?.name ?? code;
+}
+
+/** Regional-indicator emoji flag (e.g. CO → 🇨🇴). */
+export function getCountryFlagEmoji(code: string | null | undefined): string {
+  if (!code || code === 'OTHER') return '🌍';
+  const upper = code.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(upper)) return '🌍';
+  return String.fromCodePoint(
+    ...[...upper].map((ch) => 0x1f1e6 - 65 + ch.charCodeAt(0)),
+  );
+}
+
+/** Flag image URL (flagcdn). `OTHER` returns null. */
+export function getCountryFlagUrl(
+  code: string | null | undefined,
+  width: 20 | 40 | 80 | 160 = 40,
+): string | null {
+  if (!code || code === 'OTHER') return null;
+  const lower = code.trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(lower)) return null;
+  return `https://flagcdn.com/w${width}/${lower}.png`;
 }
 
