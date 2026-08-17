@@ -56,13 +56,6 @@ export class BoldPaymentsService {
     };
   }
 
-  /** Split COP total into VAT base + value so total = base + vat. */
-  splitVat(totalCop: number): { base: number; value: number } {
-    const total = Math.round(totalCop);
-    const base = Math.round(total / 1.19);
-    return { base, value: total - base };
-  }
-
   async createPaymentLink(input: {
     amountCop: number;
     reference: string;
@@ -70,14 +63,14 @@ export class BoldPaymentsService {
     callbackUrl?: string;
     payerEmail?: string;
   }): Promise<{ paymentLink: string; url: string }> {
-    const { base, value } = this.splitVat(input.amountCop);
     const body: Record<string, unknown> = {
       amount_type: 'CLOSE',
       amount: {
         currency: 'COP',
         total_amount: Math.round(input.amountCop),
         tip_amount: 0,
-        taxes: [{ type: 'VAT', base, value }],
+        // Credits are sold without VAT (Bold accepts an empty taxes list).
+        taxes: [],
       },
       reference: input.reference.slice(0, 60),
       description: input.description.slice(0, 100),
