@@ -30,6 +30,12 @@ export class VideoCallController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('ice-config')
+  iceConfig() {
+    return this.videoCallService.iceConfig();
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post()
   create(
     @CurrentUser() user: { id: string },

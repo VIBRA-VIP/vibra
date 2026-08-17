@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store';
 import {
   endVideoCallRequest,
   extendVideoCallRequest,
+  getIceConfigRequest,
   type VideoCallDto,
   type VideoCallExtendedEvent,
   type VideoCallGiftEvent,
@@ -28,20 +29,9 @@ type SignalPayload =
   | { type: 'answer'; sdp: string }
   | { type: 'candidate'; candidate: RTCIceCandidateInit };
 
-function iceServers(): RTCIceServer[] {
-  const servers: RTCIceServer[] = [
-    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  ];
-  const turnUrl = import.meta.env.VITE_TURN_URL as string | undefined;
-  if (turnUrl) {
-    servers.push({
-      urls: turnUrl,
-      username: import.meta.env.VITE_TURN_USERNAME as string | undefined,
-      credential: import.meta.env.VITE_TURN_CREDENTIAL as string | undefined,
-    });
-  }
-  return servers;
-}
+const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+];
 
 function formatRemaining(seconds: number) {
   const s = Math.max(0, Math.floor(seconds));
@@ -144,8 +134,8 @@ export function VideoCallOverlay({ call, isCaller }: Props) {
       sock.emit('video-call:signal', { callId: call.id, signal });
     };
 
-    const createPeer = (stream: MediaStream) => {
-      const pc = new RTCPeerConnection({ iceServers: iceServers() });
+    const createPeer = (stream: MediaStream, iceServers: RTCIceServer[]) => {
+      const pc = new RTCPeerConnection({ iceServers });
       pcRef.current = pc;
 
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -231,6 +221,14 @@ export function VideoCallOverlay({ call, isCaller }: Props) {
 
     async function start() {
       try {
+        let ice = FALLBACK_ICE_SERVERS;
+        try {
+          const cfg = await getIceConfigRequest();
+          if (cfg?.iceServers?.length) ice = cfg.iceServers;
+        } catch {
+          /* keep STUN-only fallback */
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'user' },
           audio: true,
@@ -244,7 +242,7 @@ export function VideoCallOverlay({ call, isCaller }: Props) {
           localVideoRef.current.srcObject = stream;
         }
 
-        createPeer(stream);
+        createPeer(stream, ice);
 
         sock.on('video-call:signal', onSignal);
         sock.on('video-call:peer-ready', onPeerReady);

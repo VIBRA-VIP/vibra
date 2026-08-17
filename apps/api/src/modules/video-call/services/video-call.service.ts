@@ -4,7 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { createHmac } from 'node:crypto';
 import { UserRole, VideoCallStatus } from '@prisma/client';
+import type { Env } from '../../../config/env.schema';
 import {
   generateVideoRoomName,
   MIN_VIDEO_CALL_MINUTES,
@@ -43,10 +46,44 @@ export class VideoCallService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeGateway,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   health() {
     return { module: 'video-call', status: 'ok' };
+  }
+
+  /**
+   * ICE servers for the browser. Always includes public STUN; adds TURN with
+   * time-limited REST credentials (coturn `use-auth-secret`) when configured.
+   */
+  iceConfig() {
+    const iceServers: {
+      urls: string | string[];
+      username?: string;
+      credential?: string;
+    }[] = [
+      {
+        urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'],
+      },
+    ];
+
+    const secret = this.config.get('TURN_SECRET', { infer: true });
+    const urlsRaw = this.config.get('TURN_URLS', { infer: true });
+    if (secret && urlsRaw) {
+      const ttlSeconds = 3600;
+      const username = `${Math.floor(Date.now() / 1000) + ttlSeconds}`;
+      const credential = createHmac('sha1', secret)
+        .update(username)
+        .digest('base64');
+      const urls = urlsRaw
+        .split(',')
+        .map((u) => u.trim())
+        .filter(Boolean);
+      iceServers.push({ urls, username, credential });
+    }
+
+    return { iceServers };
   }
 
   listGifts() {

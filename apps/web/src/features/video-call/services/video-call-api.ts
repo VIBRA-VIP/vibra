@@ -64,6 +64,15 @@ export async function endVideoCallRequest(id: string) {
   return data;
 }
 
+export type IceConfig = {
+  iceServers: RTCIceServer[];
+};
+
+export async function getIceConfigRequest() {
+  const { data } = await api.get<IceConfig>('/api/video-call/ice-config');
+  return data;
+}
+
 export type VideoCallExtendedEvent = VideoCallDto & {
   addedMinutes: number;
   addedCredits: number;

@@ -41,6 +41,10 @@ export const envSchema = z.object({
   SMTP_FROM: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   /** Bold Botón/Link de pagos identity API key (Authorization: x-api-key …). */
   BOLD_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** coturn shared secret (use-auth-secret) for time-limited TURN credentials. */
+  TURN_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** Comma-separated TURN URIs, e.g. "turn:1.2.3.4:3478?transport=udp". */
+  TURN_URLS: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;
