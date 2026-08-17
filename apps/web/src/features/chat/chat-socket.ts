@@ -42,7 +42,9 @@ export function connectChatSocket(accessToken: string | null | undefined): Socke
   connectedToken = accessToken;
   socket = io(`${resolveWsUrl()}/realtime`, {
     auth: { token: accessToken },
-    transports: ['websocket', 'polling'],
+    // Polling first: the HTTPS deploy proxies through Netlify, which cannot
+    // forward a WebSocket upgrade. Socket.io upgrades later when possible.
+    transports: ['polling', 'websocket'],
     autoConnect: true,
   });
 

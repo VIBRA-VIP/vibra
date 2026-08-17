@@ -16,6 +16,14 @@
   status = 200
   force = true
 
+# Socket.io (chat + video call signaling). Netlify proxies HTTP long-polling;
+# WebSocket upgrade is not supported here, so the client must allow polling.
+[[redirects]]
+  from = "/socket.io/*"
+  to = "http://3.17.154.80:3000/socket.io/:splat"
+  status = 200
+  force = true
+
 # Local/disk uploads served by the API
 [[redirects]]
   from = "/uploads/*"
