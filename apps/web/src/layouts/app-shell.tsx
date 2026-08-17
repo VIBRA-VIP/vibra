@@ -22,6 +22,11 @@ import {
 } from '@/features/chat/chat-notify';
 import { connectChatSocket, disconnectChatSocket } from '@/features/chat/chat-socket';
 import { mediaSrc } from '@/features/media/services/media-api';
+import {
+  VideoCallHost,
+  ensureNotificationPermission,
+  unlockCallAudio,
+} from '@/features/video-call';
 import { useAuthStore } from '@/store';
 import { cn } from '@/utils';
 
@@ -60,14 +65,18 @@ export function AppShell() {
   const prevUnreadRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const unlock = () => unlockChatAudio();
+    const unlock = () => {
+      unlockChatAudio();
+      unlockCallAudio();
+      if (isModel) ensureNotificationPermission();
+    };
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
     return () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
     };
-  }, []);
+  }, [isModel]);
 
   useEffect(() => {
     const sock = connectChatSocket(accessToken);
@@ -208,17 +217,30 @@ export function AppShell() {
               </div>
               <button
                 type="button"
+                onClick={() => navigate('/credits')}
                 className="mt-3 w-full rounded-lg bg-vibra-pink py-2 text-sm font-semibold transition hover:bg-vibra-pink-hover"
               >
                 Comprar créditos
               </button>
             </div>
           ) : (
-            <div className="rounded-xl border border-vibra-border bg-vibra-muted p-3">
-              <p className="text-xs text-zinc-400">Cola de videollamadas</p>
-              <p className="mt-1 font-display text-lg font-semibold text-white">En espera</p>
-              <p className="mt-1 text-xs text-zinc-500">Revisa Solicitudes para atender</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/earnings')}
+              className="w-full rounded-xl border border-vibra-border bg-vibra-muted p-3 text-left transition hover:border-vibra-gold/40 hover:bg-vibra-gold/5"
+            >
+              <p className="text-xs text-zinc-400">Mis ganancias</p>
+              <div className="mt-1 flex items-center gap-2">
+                <Coins className="h-4 w-4 text-vibra-gold" />
+                <span className="font-display text-lg font-semibold text-vibra-gold">
+                  {balance.toLocaleString('es-ES')}
+                </span>
+                <span className="text-xs text-zinc-500">créd</span>
+              </div>
+              <p className="mt-2 text-[11px] leading-snug text-zinc-500">
+                Toca para solicitar retiro
+              </p>
+            </button>
           )}
           <div className="flex items-center gap-3 rounded-lg px-1 py-2">
             <button
@@ -261,6 +283,38 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-vibra-border bg-vibra-elevated/95 px-4 py-2.5 backdrop-blur md:hidden">
+          <Logo to={homeTo} />
+          {!isModel ? (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 rounded-full border border-vibra-border bg-vibra-muted px-2.5 py-1">
+                <Coins className="h-4 w-4 text-vibra-gold" />
+                <span className="font-display text-sm font-semibold text-vibra-gold">
+                  {balance.toLocaleString('es-ES')}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate('/credits')}
+                className="rounded-full bg-vibra-pink px-3.5 py-1.5 text-xs font-semibold transition hover:bg-vibra-pink-hover"
+              >
+                Comprar créditos
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate('/earnings')}
+              className="flex items-center gap-1.5 rounded-full border border-vibra-border bg-vibra-muted px-3 py-1.5 transition hover:border-vibra-gold/40"
+            >
+              <Coins className="h-4 w-4 text-vibra-gold" />
+              <span className="font-display text-sm font-semibold text-vibra-gold">
+                {balance.toLocaleString('es-ES')}
+              </span>
+              <span className="text-xs text-zinc-400">Ganancias</span>
+            </button>
+          )}
+        </header>
         <main className="min-h-0 flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />
         </main>
@@ -304,6 +358,7 @@ export function AppShell() {
           </span>
         ) : null}
       </div>
+      <VideoCallHost />
     </div>
   );
 }

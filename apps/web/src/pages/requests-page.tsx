@@ -1,23 +1,19 @@
-import { useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { MessageCircle, Phone, PhoneOff, Search, Users, Video } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { MessageCircle, PhoneOff, Search, Users, Video } from 'lucide-react';
+import { meRequest } from '@/features/auth';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { fetchClients, type ClientProfile } from '@/features/profiles';
+import {
+  acceptVideoCallRequest,
+  declineVideoCallRequest,
+  listPendingVideoCallsRequest,
+  useVideoCallStore,
+  type VideoCallDto,
+} from '@/features/video-call';
 import { useAuthStore } from '@/store';
 import { cn } from '@/utils';
-
-export type CallRequest = {
-  id: string;
-  displayName: string;
-  avatarUrl: string | null;
-  type: 'VIDEO' | 'AUDIO';
-  waitedSeconds: number;
-  creditsPerMin: number;
-};
-
-/** Se llenará con Socket.io / API de videollamadas. */
-const pendingRequests: CallRequest[] = [];
 
 function formatWait(seconds: number) {
   if (seconds < 60) return `${seconds}s`;
@@ -30,12 +26,23 @@ type Tab = 'queue' | 'users';
 
 export function RequestsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const setActiveCall = useVideoCallStore((s) => s.setActiveCall);
+  const balance = user?.walletBalance ?? 0;
   const [tab, setTab] = useState<Tab>('queue');
-  const [queue, setQueue] = useState<CallRequest[]>(pendingRequests);
   const [query, setQuery] = useState('');
   const [gender, setGender] = useState('');
   const [onlyOnline, setOnlyOnline] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  const pendingQuery = useQuery({
+    queryKey: ['video-call', 'pending'],
+    queryFn: listPendingVideoCallsRequest,
+    enabled: user?.role === 'MODEL',
+    refetchInterval: 4000,
+  });
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['clients', query, gender, onlyOnline],
@@ -48,10 +55,38 @@ export function RequestsPage() {
     enabled: user?.role === 'MODEL',
   });
 
-  const sorted = useMemo(
-    () => [...queue].sort((a, b) => b.waitedSeconds - a.waitedSeconds),
-    [queue],
-  );
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const queue = useMemo(() => {
+    const items = pendingQuery.data ?? [];
+    return [...items].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  }, [pendingQuery.data]);
+
+  const acceptMutation = useMutation({
+    mutationFn: (id: string) => acceptVideoCallRequest(id),
+    onSuccess: async (call: VideoCallDto) => {
+      setActiveCall(call);
+      void queryClient.invalidateQueries({ queryKey: ['video-call', 'pending'] });
+      try {
+        const me = await meRequest();
+        setUser(me);
+      } catch {
+        /* ignore */
+      }
+    },
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: (id: string) => declineVideoCallRequest(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['video-call', 'pending'] });
+    },
+  });
 
   const clients = data?.clients ?? [];
   const totalClients = data?.totalClients ?? 0;
@@ -59,14 +94,6 @@ export function RequestsPage() {
 
   if (user?.role !== 'MODEL') {
     return <Navigate to="/explore" replace />;
-  }
-
-  function accept(id: string) {
-    setQueue((prev) => prev.filter((r) => r.id !== id));
-  }
-
-  function decline(id: string) {
-    setQueue((prev) => prev.filter((r) => r.id !== id));
   }
 
   function writeTo(client: ClientProfile) {
@@ -82,13 +109,30 @@ export function RequestsPage() {
     });
   }
 
+  function waitedSeconds(call: VideoCallDto) {
+    return Math.max(0, Math.floor((now - new Date(call.createdAt).getTime()) / 1000));
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 text-left">
-      <div className="mb-5 text-left">
-        <h1 className="font-display text-2xl font-bold md:text-3xl">Solicitudes</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Atiende videollamadas y escribe a usuarios cuando quieras.
-        </p>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3 text-left">
+        <div>
+          <h1 className="font-display text-2xl font-bold md:text-3xl">Solicitudes</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Atiende videollamadas y escribe a usuarios cuando quieras.
+          </p>
+        </div>
+        <Link
+          to="/earnings"
+          className="rounded-2xl border border-vibra-gold/30 bg-vibra-gold/10 px-4 py-2 text-right transition hover:border-vibra-gold/50 hover:bg-vibra-gold/15"
+        >
+          <p className="text-[11px] uppercase tracking-wide text-zinc-400">Ganancias</p>
+          <p className="font-display text-xl font-bold text-vibra-gold">
+            {balance.toLocaleString('es-ES')}{' '}
+            <span className="text-xs font-medium text-zinc-400">créd</span>
+          </p>
+          <p className="mt-0.5 text-[10px] text-zinc-500">Solicitar retiro</p>
+        </Link>
       </div>
 
       <div className="mb-6 grid grid-cols-3 gap-2">
@@ -104,7 +148,7 @@ export function RequestsPage() {
         </div>
         <div className="rounded-2xl border border-vibra-border bg-vibra-elevated p-3 text-center">
           <p className="text-[11px] uppercase tracking-wide text-zinc-500">En cola</p>
-          <p className="mt-1 font-display text-2xl font-bold text-vibra-pink">{sorted.length}</p>
+          <p className="mt-1 font-display text-2xl font-bold text-vibra-pink">{queue.length}</p>
         </div>
       </div>
 
@@ -119,8 +163,8 @@ export function RequestsPage() {
         >
           <Video className="h-4 w-4" />
           Cola
-          {sorted.length > 0 ? (
-            <span className="rounded-full bg-black/20 px-1.5 text-[11px]">{sorted.length}</span>
+          {queue.length > 0 ? (
+            <span className="rounded-full bg-black/20 px-1.5 text-[11px]">{queue.length}</span>
           ) : null}
         </button>
         <button
@@ -138,7 +182,9 @@ export function RequestsPage() {
       </div>
 
       {tab === 'queue' ? (
-        sorted.length === 0 ? (
+        pendingQuery.isLoading ? (
+          <p className="text-sm text-zinc-400">Cargando cola…</p>
+        ) : queue.length === 0 ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center rounded-3xl border border-dashed border-vibra-border bg-vibra-elevated/60 px-6 py-14 text-center">
             <div
               className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-vibra-pink/30 via-zinc-800 to-zinc-950 text-5xl shadow-inner"
@@ -160,8 +206,15 @@ export function RequestsPage() {
             </button>
           </div>
         ) : (
+          <>
+            {acceptMutation.isError ? (
+              <p className="mb-3 text-sm text-red-400">
+                {(acceptMutation.error as { response?: { data?: { message?: string } } })?.response
+                  ?.data?.message ?? 'No se pudo aceptar la llamada'}
+              </p>
+            ) : null}
           <ul className="space-y-3">
-            {sorted.map((req, index) => (
+            {queue.map((req, index) => (
               <li
                 key={req.id}
                 className={cn(
@@ -170,29 +223,25 @@ export function RequestsPage() {
                 )}
               >
                 <div className="relative shrink-0">
-                  {req.avatarUrl ? (
+                  {req.client.avatarUrl ? (
                     <img
-                      src={mediaSrc(req.avatarUrl)}
-                      alt={req.displayName}
+                      src={mediaSrc(req.client.avatarUrl)}
+                      alt={req.client.displayName}
                       className="h-12 w-12 rounded-full object-cover"
                     />
                   ) : (
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-700 text-lg font-semibold">
-                      {req.displayName.charAt(0).toUpperCase()}
+                      {req.client.displayName.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-vibra-pink text-white shadow">
-                    {req.type === 'VIDEO' ? (
-                      <Video className="h-3.5 w-3.5" />
-                    ) : (
-                      <Phone className="h-3.5 w-3.5" />
-                    )}
+                    <Video className="h-3.5 w-3.5" />
                   </span>
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-semibold">{req.displayName}</p>
+                    <p className="truncate font-semibold">{req.client.displayName}</p>
                     {index === 0 ? (
                       <span className="rounded-full bg-vibra-pink px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">
                         Siguiente
@@ -204,24 +253,27 @@ export function RequestsPage() {
                     )}
                   </div>
                   <p className="text-sm text-zinc-400">
-                    {req.type === 'VIDEO' ? 'Videollamada' : 'Llamada'} · {req.creditsPerMin}{' '}
-                    créd/min · espera {formatWait(req.waitedSeconds)}
+                    Videollamada · {req.pricePerMin} créd/min · ganas{' '}
+                    <span className="font-semibold text-vibra-gold">{req.totalCredits} créd</span> ·
+                    espera {formatWait(waitedSeconds(req))}
                   </p>
                 </div>
 
                 <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
-                    onClick={() => decline(req.id)}
-                    className="rounded-xl border border-vibra-border p-2.5 text-zinc-400 transition hover:border-red-500/50 hover:text-red-400"
+                    disabled={declineMutation.isPending || acceptMutation.isPending}
+                    onClick={() => declineMutation.mutate(req.id)}
+                    className="rounded-xl border border-vibra-border p-2.5 text-zinc-400 transition hover:border-red-500/50 hover:text-red-400 disabled:opacity-50"
                     aria-label="Rechazar"
                   >
                     <PhoneOff className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
-                    onClick={() => accept(req.id)}
-                    className="rounded-xl bg-vibra-pink px-3 py-2 text-sm font-semibold transition hover:bg-vibra-pink-hover"
+                    disabled={acceptMutation.isPending || declineMutation.isPending}
+                    onClick={() => acceptMutation.mutate(req.id)}
+                    className="rounded-xl bg-vibra-pink px-3 py-2 text-sm font-semibold transition hover:bg-vibra-pink-hover disabled:opacity-50"
                   >
                     Aceptar
                   </button>
@@ -229,6 +281,7 @@ export function RequestsPage() {
               </li>
             ))}
           </ul>
+          </>
         )
       ) : (
         <div className="space-y-4">

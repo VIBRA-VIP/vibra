@@ -7,7 +7,7 @@ Plataforma web de interacción entre usuarios y creadores (chat, videollamadas, 
 - **Monorepo:** Turborepo + pnpm
 - **Web:** React 19, Vite, TailwindCSS, TanStack Query, Zustand
 - **API:** NestJS, Prisma, PostgreSQL, Socket.io, JWT
-- **Videollamadas:** Jitsi Meet (fases posteriores)
+- **Videollamadas:** WebRTC nativo con señalización Socket.io (mín. 3 min prepago)
 
 ## Requisitos
 

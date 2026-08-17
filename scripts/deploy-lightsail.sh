@@ -22,6 +22,7 @@ KEY_PAIR_NAME="${LIGHTSAIL_KEY_PAIR_NAME:-vibra-lightsail}"
 KEY_FILE="${LIGHTSAIL_KEY_FILE:-$HOME/.ssh/${KEY_PAIR_NAME}}"
 API_PORT="${API_PORT:-3000}"
 WEB_URL="${WEB_URL:-}"
+BOLD_API_KEY="${BOLD_API_KEY:-}"
 
 need_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -176,16 +177,22 @@ JWT_REFRESH_SECRET="$(openssl rand -hex 32)"
 
 # Keep existing secrets if .env already present on server
 if "${SSH[@]}" 'test -f "$HOME/vibra/.env"'; then
-  echo "==> Keeping existing server .env (updating API_URL / WEB_URL)"
+  echo "==> Keeping existing server .env (updating API_URL / WEB_URL${BOLD_API_KEY:+ / BOLD_API_KEY})"
   "${SSH[@]}" bash -s <<REMOTE
 set -euo pipefail
 cd "\$HOME/vibra"
-grep -vE '^(API_URL|WEB_URL|API_PORT)=' .env > .env.tmp || true
+EXISTING_BOLD="\$(grep -E '^BOLD_API_KEY=' .env | head -1 || true)"
+grep -vE '^(API_URL|WEB_URL|API_PORT|BOLD_API_KEY)=' .env > .env.tmp || true
 cat >> .env.tmp <<EOF
 API_PORT=${API_PORT}
 API_URL=${API_URL}
 WEB_URL=${WEB_URL}
 EOF
+if [[ -n "${BOLD_API_KEY}" ]]; then
+  echo "BOLD_API_KEY=${BOLD_API_KEY}" >> .env.tmp
+elif [[ -n "\$EXISTING_BOLD" ]]; then
+  echo "\$EXISTING_BOLD" >> .env.tmp
+fi
 mv .env.tmp .env
 chmod 600 .env
 REMOTE
@@ -204,6 +211,7 @@ JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
 JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 JWT_ACCESS_EXPIRES_IN=30d
 JWT_REFRESH_EXPIRES_IN=30d
+BOLD_API_KEY=${BOLD_API_KEY}
 EOF
 chmod 600 "\$HOME/vibra/.env"
 REMOTE

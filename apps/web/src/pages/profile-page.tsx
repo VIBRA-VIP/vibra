@@ -12,6 +12,7 @@ import {
   fetchModelByUsername,
   toggleFavoriteRequest,
 } from '@/features/profiles/services/profiles-api';
+import { useVideoCallStore } from '@/features/video-call';
 import { useAuthStore } from '@/store';
 import { cn, maskDisplayName } from '@/utils';
 
@@ -104,6 +105,8 @@ export function ProfilePage() {
       value: formatAttrValue(key, String(model!.attributes[key])),
     }));
 
+  const openConfirm = useVideoCallStore((s) => s.openConfirm);
+
   function startChat() {
     if (!model) return;
     navigate('/chats', {
@@ -115,6 +118,17 @@ export function ProfilePage() {
           avatarUrl: model.avatarUrl,
         },
       },
+    });
+  }
+
+  function startVideo() {
+    if (!model) return;
+    openConfirm({
+      userId: model.userId,
+      displayName: model.displayName,
+      username: model.username,
+      avatarUrl: model.avatarUrl,
+      videoPricePerMin: model.videoPricePerMin,
     });
   }
 
@@ -363,6 +377,14 @@ export function ProfilePage() {
                   >
                     <MessageCircle className="h-4 w-4" />
                     Mensaje
+                  </button>
+                  <button
+                    type="button"
+                    onClick={startVideo}
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-vibra-pink px-4 text-sm font-semibold text-vibra-pink transition hover:bg-vibra-pink/10 sm:flex-none"
+                  >
+                    <Video className="h-4 w-4" />
+                    Video
                   </button>
                 </div>
               )}

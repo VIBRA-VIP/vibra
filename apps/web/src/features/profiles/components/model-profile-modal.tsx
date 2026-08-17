@@ -6,6 +6,7 @@ import { formatAttrValue } from '@vibra/shared';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { BodyAttrIcon, attrKindFromKey } from '@/components/body-attr-icons';
 import { mediaSrc } from '@/features/media/services/media-api';
+import { useVideoCallStore } from '@/features/video-call';
 import { toggleFavoriteRequest } from '../services/profiles-api';
 import type { ModelProfile } from '../types/model-profile';
 import { cn, maskDisplayName } from '@/utils';
@@ -87,6 +88,8 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
     },
   });
 
+  const openConfirm = useVideoCallStore((s) => s.openConfirm);
+
   function startChat() {
     onClose();
     navigate('/chats', {
@@ -98,6 +101,17 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
           avatarUrl: model.avatarUrl,
         },
       },
+    });
+  }
+
+  function startVideo() {
+    onClose();
+    openConfirm({
+      userId: model.userId,
+      displayName: model.displayName,
+      username: model.username,
+      avatarUrl: model.avatarUrl,
+      videoPricePerMin: model.videoPricePerMin,
     });
   }
 
@@ -265,7 +279,8 @@ export function ModelProfileModal({ model, onClose, onFavoriteChange }: Props) {
               </button>
               <button
                 type="button"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-vibra-pink py-3 text-sm font-semibold text-vibra-pink"
+                onClick={startVideo}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-vibra-pink py-3 text-sm font-semibold text-vibra-pink transition hover:bg-vibra-pink/10"
               >
                 <Video className="h-4 w-4" />
                 Video

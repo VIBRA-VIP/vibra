@@ -90,11 +90,24 @@ export class AuthService {
           },
         },
         wallet: {
-          create: { balance: role === UserRole.CLIENT ? 100 : 0 },
+          create: { balance: role === UserRole.CLIENT ? 50 : 0 },
         },
       },
       include: { profile: true, wallet: true },
     });
+
+    if (role === UserRole.CLIENT && user.wallet) {
+      await this.prisma.creditTransaction.create({
+        data: {
+          walletId: user.wallet.id,
+          userId: user.id,
+          type: 'ADMIN_ADJUST',
+          amount: 50,
+          balanceAfter: 50,
+          description: 'Bienvenida: 50 créditos gratis',
+        },
+      });
+    }
 
     return this.buildAuthResponse(user);
   }

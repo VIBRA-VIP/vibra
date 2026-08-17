@@ -39,6 +39,8 @@ export const envSchema = z.object({
   SMTP_USER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   SMTP_PASS: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
   SMTP_FROM: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  /** Bold Botón/Link de pagos identity API key (Authorization: x-api-key …). */
+  BOLD_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;

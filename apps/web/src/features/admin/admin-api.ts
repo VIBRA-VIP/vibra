@@ -126,3 +126,50 @@ export async function rejectModelRequest(userId: string) {
   );
   return data;
 }
+
+export type AdminPayoutDto = {
+  id: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  username: string;
+  creditsGross: number;
+  feeCredits: number;
+  netCredits: number;
+  amountCop: number;
+  feeRate: number;
+  status: 'PENDING' | 'PROCESSING' | 'PAID' | 'REJECTED' | 'CANCELLED';
+  bankName: string;
+  payoutAccountType: string;
+  payoutAccount: string;
+  payoutHolder: string;
+  scheduledFor: string;
+  paidAt: string | null;
+  createdAt: string;
+};
+
+export async function listAdminPayoutsRequest(status?: string) {
+  const { data } = await api.get<AdminPayoutDto[]>('/api/admin/payouts', {
+    headers: adminHeaders(),
+    params: status ? { status } : undefined,
+  });
+  return data;
+}
+
+export async function markAdminPayoutPaidRequest(id: string) {
+  const { data } = await api.post(
+    `/api/admin/payouts/${id}/paid`,
+    {},
+    { headers: adminHeaders() },
+  );
+  return data;
+}
+
+export async function rejectAdminPayoutRequest(id: string, note?: string) {
+  const { data } = await api.post(
+    `/api/admin/payouts/${id}/reject`,
+    { note },
+    { headers: adminHeaders() },
+  );
+  return data;
+}

@@ -33,8 +33,8 @@ export class PostsService {
     if (dto.media.length < 1) {
       throw new BadRequestException('Agrega al menos 1 foto o video');
     }
-    if (dto.media.length > 8) {
-      throw new BadRequestException('Máximo 8 archivos por publicación');
+    if (dto.media.length > 5) {
+      throw new BadRequestException('Máximo 5 archivos por publicación');
     }
     if (images.length + videos.length !== dto.media.length) {
       throw new BadRequestException('Tipo de medio inválido');

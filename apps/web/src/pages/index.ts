@@ -11,3 +11,5 @@ export { SettingsPage } from './settings-page';
 export { RequestsPage } from './requests-page';
 export { PendingVerificationPage } from './pending-verification-page';
 export { PublishPage } from './publish-page';
+export { CreditsPage } from './credits-page';
+export { EarningsPage } from './earnings-page';

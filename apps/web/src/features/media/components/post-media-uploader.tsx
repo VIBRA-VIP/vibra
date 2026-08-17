@@ -14,7 +14,7 @@ type Props = {
   disabled?: boolean;
 };
 
-export function PostMediaUploader({ items, onChange, max = 8, disabled = false }: Props) {
+export function PostMediaUploader({ items, onChange, max = 5, disabled = false }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

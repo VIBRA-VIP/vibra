@@ -40,7 +40,7 @@ export class CreatePostDto {
 
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(8)
+  @ArrayMaxSize(5)
   @ValidateNested({ each: true })
   @Type(() => PostMediaItemDto)
   media!: PostMediaItemDto[];

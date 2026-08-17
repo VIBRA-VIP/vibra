@@ -7,13 +7,18 @@ import {
   clearAdminToken,
   fetchAdminDashboardRequest,
   getAdminToken,
+  listAdminPayoutsRequest,
   listPendingModelsRequest,
+  markAdminPayoutPaidRequest,
+  rejectAdminPayoutRequest,
   rejectModelRequest,
   setAdminToken,
   type AdminDashboardDto,
+  type AdminPayoutDto,
   type PendingModelDto,
 } from '@/features/admin/admin-api';
 import { mediaSrc } from '@/features/media/services/media-api';
+import { formatCop } from '@vibra/shared';
 import { cn } from '@/utils';
 
 const inputClass =
@@ -219,6 +224,14 @@ export function AdminPage() {
     retry: false,
   });
 
+  const payoutsQuery = useQuery({
+    queryKey: ['admin', 'payouts'],
+    queryFn: () => listAdminPayoutsRequest(),
+    enabled: Boolean(token),
+    retry: false,
+    refetchInterval: 20_000,
+  });
+
   const approveMutation = useMutation({
     mutationFn: approveModelRequest,
     onSuccess: async () => {
@@ -232,6 +245,20 @@ export function AdminPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'pending-models'] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
+    },
+  });
+
+  const payoutPaidMutation = useMutation({
+    mutationFn: markAdminPayoutPaidRequest,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'payouts'] });
+    },
+  });
+
+  const payoutRejectMutation = useMutation({
+    mutationFn: (id: string) => rejectAdminPayoutRequest(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'payouts'] });
     },
   });
 
@@ -288,7 +315,11 @@ export function AdminPage() {
   }
 
   const pending = pendingQuery.data ?? [];
-  const sessionError = pendingQuery.isError || dashboardQuery.isError;
+  const payouts = payoutsQuery.data ?? [];
+  const openPayouts = payouts.filter(
+    (p) => p.status === 'PENDING' || p.status === 'PROCESSING',
+  );
+  const sessionError = pendingQuery.isError || dashboardQuery.isError || payoutsQuery.isError;
 
   return (
     <div className="mx-auto min-h-screen max-w-5xl space-y-10 px-4 py-8">
@@ -296,7 +327,7 @@ export function AdminPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Administración</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Métricas del servidor y verificación de modelos.
+            Métricas, verificación de modelos y retiros.
           </p>
         </div>
         <button
@@ -321,6 +352,44 @@ export function AdminPage() {
         <p className="text-sm text-zinc-400">Cargando dashboard...</p>
       ) : null}
       {dashboardQuery.data ? <DashboardPanel data={dashboardQuery.data} /> : null}
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="font-display text-xl font-bold">
+            Retiros solicitados
+            {openPayouts.length > 0 ? (
+              <span className="ml-2 rounded-full bg-vibra-gold/20 px-2 py-0.5 text-sm font-semibold text-vibra-gold">
+                {openPayouts.length}
+              </span>
+            ) : null}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Transfiere el neto a la cuenta y marca como pagado. Rechazar devuelve los créditos.
+          </p>
+        </div>
+
+        {payoutsQuery.isLoading ? (
+          <p className="text-sm text-zinc-400">Cargando retiros...</p>
+        ) : null}
+
+        {!payoutsQuery.isLoading && !payoutsQuery.isError && payouts.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-vibra-border px-6 py-12 text-center text-sm text-zinc-400">
+            Nadie ha solicitado retiros todavía.
+          </p>
+        ) : null}
+
+        <div className="space-y-3">
+          {payouts.map((payout) => (
+            <AdminPayoutCard
+              key={payout.id}
+              payout={payout}
+              busy={payoutPaidMutation.isPending || payoutRejectMutation.isPending}
+              onPaid={() => payoutPaidMutation.mutate(payout.id)}
+              onReject={() => payoutRejectMutation.mutate(payout.id)}
+            />
+          ))}
+        </div>
+      </section>
 
       <section className="space-y-4">
         <div>
@@ -353,6 +422,91 @@ export function AdminPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function AdminPayoutCard({
+  payout,
+  busy,
+  onPaid,
+  onReject,
+}: {
+  payout: AdminPayoutDto;
+  busy: boolean;
+  onPaid: () => void;
+  onReject: () => void;
+}) {
+  const open = payout.status === 'PENDING' || payout.status === 'PROCESSING';
+  return (
+    <article className="rounded-2xl border border-vibra-border bg-vibra-elevated p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-white">
+            {payout.displayName}{' '}
+            <span className="text-sm font-normal text-zinc-400">@{payout.username}</span>
+          </p>
+          <p className="mt-0.5 text-sm text-zinc-400">{payout.email}</p>
+          <p className="mt-2 text-sm text-zinc-300">
+            Bruto <strong>{payout.creditsGross}</strong> · comisión{' '}
+            <strong>{payout.feeCredits}</strong> (15%) · neto{' '}
+            <strong className="text-vibra-gold">
+              {payout.netCredits} créd · {formatCop(payout.amountCop)}
+            </strong>
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {payout.bankName} · {payout.payoutAccountType === 'AHORROS' ? 'Ahorros' : 'Corriente'} ·{' '}
+            {payout.payoutHolder} · {payout.payoutAccount}
+          </p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Solicitado {new Date(payout.createdAt).toLocaleString('es-CO')}
+            {payout.paidAt
+              ? ` · pagado ${new Date(payout.paidAt).toLocaleString('es-CO')}`
+              : ''}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide',
+              payout.status === 'PAID' && 'bg-vibra-online/20 text-vibra-online',
+              open && 'bg-vibra-gold/20 text-vibra-gold',
+              (payout.status === 'REJECTED' || payout.status === 'CANCELLED') &&
+                'bg-red-500/20 text-red-300',
+            )}
+          >
+            {payout.status === 'PENDING'
+              ? 'Pendiente'
+              : payout.status === 'PROCESSING'
+                ? 'En proceso'
+                : payout.status === 'PAID'
+                  ? 'Pagado'
+                  : payout.status === 'REJECTED'
+                    ? 'Rechazado'
+                    : payout.status}
+          </span>
+          {open ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onReject}
+                className="rounded-xl border border-red-500/40 px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+              >
+                Rechazar
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onPaid}
+                className="rounded-xl bg-vibra-pink px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+              >
+                Marcar pagado
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </article>
   );
 }
 

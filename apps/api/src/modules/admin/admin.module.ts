@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import type { Env } from '../../config/env.schema';
 import { DatabaseModule } from '../../database/database.module';
 import { MailModule } from '../mail/mail.module';
+import { PayoutsModule } from '../payouts/payouts.module';
 import { AdminController } from './controllers/admin.controller';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { AdminService } from './services/admin.service';
@@ -13,6 +14,7 @@ import { AdminService } from './services/admin.service';
     DatabaseModule,
     ConfigModule,
     MailModule,
+    PayoutsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -36,6 +36,23 @@ enum TransactionType {
   GIFT
   REFUND
   ADMIN_ADJUST
+  PAYOUT
+}
+
+enum CreditPurchaseStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
+enum PayoutRequestStatus {
+  PENDING
+  PROCESSING
+  PAID
+  REJECTED
+  CANCELLED
 }
 
 enum VideoCallStatus {
@@ -112,6 +129,8 @@ model User {
   videoCallsAsClient   VideoCall[]          @relation("VideoCallsAsClient")
   videoCallsAsModel    VideoCall[]          @relation("VideoCallsAsModel")
   creditTransactions   CreditTransaction[]
+  creditPurchases      CreditPurchase[]
+  payoutRequests       PayoutRequest[]
   favoritesGiven       Favorite[]           @relation("FavoritesGiven")
   favoritesReceived    Favorite[]           @relation("FavoritesReceived")
   posts                Post[]
@@ -269,6 +288,30 @@ model CreditTransaction {
   @@map("credit_transactions")
 }
 
+model CreditPurchase {
+  id                  String               @id @default(uuid()) @db.Uuid
+  userId              String               @map("user_id") @db.Uuid
+  packageId           String               @map("package_id")
+  credits             Int
+  amountCop           Int                  @map("amount_cop")
+  status              CreditPurchaseStatus @default(PENDING)
+  reference           String               @unique
+  boldPaymentLink     String?              @map("bold_payment_link")
+  boldPaymentUrl      String?              @map("bold_payment_url") @db.Text
+  boldTransactionId   String?              @map("bold_transaction_id")
+  webhookEventId      String?              @unique @map("webhook_event_id")
+  paidAt              DateTime?            @map("paid_at")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([boldPaymentLink])
+  @@map("credit_purchases")
+}
+
 model VideoCall {
   id           String          @id @default(uuid()) @db.Uuid
   clientId     String          @map("client_id") @db.Uuid
@@ -277,6 +320,7 @@ model VideoCall {
   status       VideoCallStatus @default(PENDING)
   pricePerMin  Int             @map("price_per_min")
   creditsSpent Int             @default(0) @map("credits_spent")
+  extraMinutes Int             @default(0) @map("extra_minutes")
   startedAt    DateTime?       @map("started_at")
   endedAt      DateTime?       @map("ended_at")
   createdAt    DateTime        @default(now()) @map("created_at")
@@ -430,4 +474,31 @@ model AdminSecret {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("admin_secrets")
+}
+
+model PayoutRequest {
+  id              String              @id @default(uuid()) @db.Uuid
+  userId          String              @map("user_id") @db.Uuid
+  creditsGross    Int                 @map("credits_gross")
+  feeCredits      Int                 @map("fee_credits")
+  netCredits      Int                 @map("net_credits")
+  amountCop       Int                 @map("amount_cop")
+  feeRate         Float               @default(0.15) @map("fee_rate")
+  status          PayoutRequestStatus @default(PENDING)
+  payoutBankId    Int                 @map("payout_bank_id")
+  payoutAccountType PayoutAccountType @map("payout_account_type")
+  payoutAccount   String              @map("payout_account")
+  payoutHolder    String              @map("payout_holder")
+  scheduledFor    DateTime            @map("scheduled_for") @db.Date
+  paidAt          DateTime?           @map("paid_at")
+  note            String?
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([scheduledFor])
+  @@map("payout_requests")
 }

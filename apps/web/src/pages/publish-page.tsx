@@ -12,7 +12,7 @@ import { useAuthStore } from '@/store';
 const inputClass =
   'w-full rounded-xl border border-vibra-border bg-vibra-muted px-4 py-3 text-sm outline-none focus:border-vibra-pink/50';
 
-const MAX_MEDIA = 8;
+const MAX_MEDIA = 5;
 
 export function PublishPage() {
   const navigate = useNavigate();

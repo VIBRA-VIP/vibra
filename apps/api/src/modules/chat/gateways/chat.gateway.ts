@@ -9,7 +9,9 @@ import {
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { VideoCallStatus } from '@prisma/client';
 import { Server, Socket } from 'socket.io';
+import { PrismaService } from '../../../database/prisma.service';
 
 @WebSocketGateway({
   cors: {
@@ -27,7 +29,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async handleConnection(client: Socket) {
     try {
@@ -86,5 +91,48 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       userId,
       isTyping: Boolean(body.isTyping),
     });
+  }
+
+  /** Relays WebRTC offer/answer/ICE between the two participants of an active call. */
+  @SubscribeMessage('video-call:signal')
+  async handleVideoCallSignal(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { callId?: string; signal?: unknown },
+  ) {
+    const peerUserId = await this.resolveCallPeer(client, body?.callId);
+    if (!peerUserId || body?.signal == null) return;
+    this.emitToUser(peerUserId, 'video-call:signal', {
+      callId: body.callId,
+      fromUserId: client.data.userId as string,
+      signal: body.signal,
+    });
+  }
+
+  /** Tells the other participant that this side is ready to negotiate. */
+  @SubscribeMessage('video-call:ready')
+  async handleVideoCallReady(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { callId?: string },
+  ) {
+    const peerUserId = await this.resolveCallPeer(client, body?.callId);
+    if (!peerUserId) return;
+    this.emitToUser(peerUserId, 'video-call:peer-ready', {
+      callId: body.callId,
+      fromUserId: client.data.userId as string,
+    });
+  }
+
+  private async resolveCallPeer(client: Socket, callId?: string): Promise<string | null> {
+    const userId = client.data.userId as string | undefined;
+    if (!userId || !callId) return null;
+
+    const call = await this.prisma.videoCall.findUnique({
+      where: { id: callId },
+      select: { clientId: true, modelId: true, status: true },
+    });
+    if (!call || call.status !== VideoCallStatus.ACTIVE) return null;
+    if (call.clientId !== userId && call.modelId !== userId) return null;
+
+    return call.clientId === userId ? call.modelId : call.clientId;
   }
 }

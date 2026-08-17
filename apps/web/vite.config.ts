@@ -43,7 +43,8 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
-      '/realtime': {
+      // Socket.io transports always hit /socket.io; "/realtime" is only the namespace.
+      '/socket.io': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         ws: true,

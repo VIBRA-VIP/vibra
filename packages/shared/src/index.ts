@@ -9,6 +9,26 @@ export function generateVideoRoomName(id?: string): string {
   return `vibra_${suffix}`;
 }
 
+/** Minimum prepaid block for video calls (credits charged = pricePerMin × this). */
+export const MIN_VIDEO_CALL_MINUTES = 3;
+
+export function videoCallPrepaidCredits(pricePerMin: number): number {
+  const price = Number.isFinite(pricePerMin) ? Math.max(1, Math.round(pricePerMin)) : 1;
+  return price * MIN_VIDEO_CALL_MINUTES;
+}
+
+/** Extra minute blocks a client can add to a call that is about to end. */
+export const VIDEO_CALL_EXTEND_OPTIONS = [3, 5, 10] as const;
+
+/** Seconds left at which the client is offered to keep the call going. */
+export const VIDEO_CALL_EXTEND_WINDOW_SECONDS = 60;
+
+export function videoCallExtendCredits(pricePerMin: number, minutes: number): number {
+  const price = Number.isFinite(pricePerMin) ? Math.max(1, Math.round(pricePerMin)) : 1;
+  const mins = Number.isFinite(minutes) ? Math.max(1, Math.round(minutes)) : 1;
+  return price * mins;
+}
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -249,6 +269,26 @@ export const CREDIT_VALUE_COP = 1500;
 export function creditsToCop(credits: number): number {
   const n = Number.isFinite(credits) ? Math.max(0, credits) : 0;
   return Math.round(n * CREDIT_VALUE_COP);
+}
+
+/** Platform fee on model payouts (15%). */
+export const PLATFORM_PAYOUT_FEE_RATE = 0.15;
+
+/** Minimum credits a model can withdraw in one request. */
+export const MIN_PAYOUT_CREDITS = 50;
+
+export function calcPayoutBreakdown(credits: number) {
+  const gross = Math.max(0, Math.floor(Number(credits) || 0));
+  const feeCredits = Math.round(gross * PLATFORM_PAYOUT_FEE_RATE);
+  const netCredits = Math.max(0, gross - feeCredits);
+  return {
+    creditsGross: gross,
+    feeCredits,
+    netCredits,
+    feeRate: PLATFORM_PAYOUT_FEE_RATE,
+    amountCop: creditsToCop(netCredits),
+    feeCop: creditsToCop(feeCredits),
+  };
 }
 
 export function formatCop(amount: number): string {

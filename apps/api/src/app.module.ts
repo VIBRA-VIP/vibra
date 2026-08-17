@@ -12,6 +12,7 @@ import { CreditsModule } from './modules/credits/credits.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PostsModule } from './modules/posts/posts.module';
+import { PayoutsModule } from './modules/payouts/payouts.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PostsModule } from './modules/posts/posts.module';
     ChatModule,
     VideoCallModule,
     CreditsModule,
+    PayoutsModule,
     NotificationsModule,
     AdminModule,
     PostsModule,

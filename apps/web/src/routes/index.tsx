@@ -3,7 +3,9 @@ import { AppShell, MarketingLayout } from '@/layouts';
 import {
   AdminPage,
   ChatsPage,
+  CreditsPage,
   DiscoverPage,
+  EarningsPage,
   ExplorePage,
   LandingPage,
   LoginPage,
@@ -41,6 +43,8 @@ export function AppRoutes() {
           <Route path="/me" element={<MyProfilePage />} />
           <Route path="/profile/:id" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/credits" element={<CreditsPage />} />
+          <Route path="/earnings" element={<EarningsPage />} />
         </Route>
       </Route>
 

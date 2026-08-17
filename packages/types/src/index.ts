@@ -26,6 +26,7 @@ export enum TransactionType {
   GIFT = 'GIFT',
   REFUND = 'REFUND',
   ADMIN_ADJUST = 'ADMIN_ADJUST',
+  PAYOUT = 'PAYOUT',
 }
 
 export enum VideoCallStatus {
@@ -85,8 +86,29 @@ export interface ProfilePublic {
 }
 
 export const CREDIT_PACKAGES = [
-  { id: 'pack_100', credits: 100, priceLabel: '100 créditos' },
-  { id: 'pack_500', credits: 500, priceLabel: '500 créditos' },
-  { id: 'pack_1000', credits: 1000, priceLabel: '1000 créditos' },
-  { id: 'pack_2500', credits: 2500, priceLabel: '2500 créditos' },
+  { id: 'pack_30', credits: 30, label: '30 créditos' },
+  { id: 'pack_100', credits: 100, label: '100 créditos' },
+  { id: 'pack_300', credits: 300, label: '300 créditos' },
 ] as const;
+
+export type CreditPackageId = (typeof CREDIT_PACKAGES)[number]['id'];
+
+export function getCreditPackage(id: string) {
+  return CREDIT_PACKAGES.find((p) => p.id === id) ?? null;
+}
+
+/** In-call gifts the client can send to the model (debited from client wallet). */
+export const GIFT_CATALOG = [
+  { id: 'rose', emoji: '🌹', label: 'Rosa', credits: 5 },
+  { id: 'kiss', emoji: '💋', label: 'Beso', credits: 10 },
+  { id: 'heart', emoji: '💖', label: 'Corazón', credits: 20 },
+  { id: 'fire', emoji: '🔥', label: 'Fuego', credits: 35 },
+  { id: 'diamond', emoji: '💎', label: 'Diamante', credits: 50 },
+  { id: 'crown', emoji: '👑', label: 'Corona', credits: 100 },
+] as const;
+
+export type GiftId = (typeof GIFT_CATALOG)[number]['id'];
+
+export function getGift(id: string) {
+  return GIFT_CATALOG.find((g) => g.id === id) ?? null;
+}
