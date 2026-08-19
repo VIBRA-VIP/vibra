@@ -19,14 +19,11 @@ export function PostGridTile({ post, onOpen }: Props) {
       onClick={() => onOpen?.(post)}
       className="group relative aspect-square overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 transition hover:ring-vibra-pink/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-vibra-pink"
     >
-      {cover ? (
+      {cover && !post.locked && cover.url ? (
         isVideo ? (
           <video
             src={mediaSrc(cover.url)}
-            className={cn(
-              'h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]',
-              post.locked && 'scale-110 blur-xl brightness-50',
-            )}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
             muted
             playsInline
             preload="metadata"
@@ -35,16 +32,11 @@ export function PostGridTile({ post, onOpen }: Props) {
           <img
             src={mediaSrc(cover.url)}
             alt=""
-            className={cn(
-              'h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]',
-              post.locked && 'scale-110 blur-xl brightness-50',
-            )}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
           />
         )
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-zinc-900 px-3 text-center text-xs text-zinc-500">
-          {post.text?.slice(0, 80) || 'Publicación'}
-        </div>
+        <div className="h-full w-full bg-gradient-to-b from-zinc-800 to-zinc-950" />
       )}
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent opacity-80" />

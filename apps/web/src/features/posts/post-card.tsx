@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Heart,
   MessageCircle,
@@ -7,14 +8,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Lock,
+  Coins,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { VerifiedBadge } from '@/components/verified-badge';
 import { mediaSrc } from '@/features/media/services/media-api';
 import { toggleFavoriteRequest } from '@/features/profiles/services/profiles-api';
+import { useAuthStore } from '@/store';
 import { cn, maskDisplayName } from '@/utils';
 import { PostCommentsInline } from './post-comments-inline';
-import { togglePostLikeRequest, type FeedPostDto } from './posts-api';
+import { togglePostLikeRequest, unlockPostRequest, type FeedPostDto } from './posts-api';
 
 function formatPostDate(iso: string) {
   const d = new Date(iso);
@@ -30,10 +33,15 @@ type Props = {
   onOpenProfile?: (username: string) => void;
   /** Hide follow / profile actions (e.g. own profile). */
   hideFollow?: boolean;
+  onUnlocked?: (post: FeedPostDto) => void;
 };
 
-export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
+export function PostCard({ post, onOpenProfile, hideFollow = false, onUnlocked }: Props) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const [view, setView] = useState(post);
   const [index, setIndex] = useState(0);
   const [liked, setLiked] = useState(post.likedByMe);
   const [likesCount, setLikesCount] = useState(post.likesCount);
@@ -41,12 +49,16 @@ export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
   const [following, setFollowing] = useState(post.isFollowing);
   const [burst, setBurst] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
-  const slides = useMemo(() => post.media, [post.media]);
+  const slides = useMemo(() => view.media, [view.media]);
   const current = slides[index] ?? slides[0];
+  const price = view.priceCredits ?? 100;
+  const balance = user?.walletBalance ?? 0;
+  const canAfford = balance >= price;
 
   const likeMutation = useMutation({
-    mutationFn: () => togglePostLikeRequest(post.id),
+    mutationFn: () => togglePostLikeRequest(view.id),
     onSuccess: (data) => {
       setLiked(data.liked);
       setLikesCount(data.likesCount);
@@ -59,13 +71,39 @@ export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
   });
 
   const followMutation = useMutation({
-    mutationFn: () => toggleFavoriteRequest(post.author.userId),
+    mutationFn: () => toggleFavoriteRequest(view.author.userId),
     onSuccess: (data) => {
       setFollowing(data.favorited);
       void queryClient.invalidateQueries({ queryKey: ['posts'] });
       void queryClient.invalidateQueries({ queryKey: ['models'] });
     },
   });
+
+  const unlockMutation = useMutation({
+    mutationFn: () => unlockPostRequest(view.id),
+    onSuccess: (data) => {
+      setPayError(null);
+      setView(data.post);
+      onUnlocked?.(data.post);
+      if (user && data.clientBalance != null) {
+        setUser({ ...user, walletBalance: data.clientBalance });
+      }
+      void queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+    onError: (err: { response?: { data?: { message?: string | string[] } } }) => {
+      const raw = err.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw[0] : raw;
+      setPayError(msg ?? 'No se pudo desbloquear');
+    },
+  });
+
+  useEffect(() => {
+    setView(post);
+    setLiked(post.likedByMe);
+    setLikesCount(post.likesCount);
+    setCommentsCount(post.commentsCount);
+    setFollowing(post.isFollowing);
+  }, [post]);
 
   function prev() {
     setIndex((i) => (i <= 0 ? slides.length - 1 : i - 1));
@@ -79,33 +117,33 @@ export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
       <header className="flex items-center gap-3 px-4 py-3">
         <button
           type="button"
-          onClick={() => onOpenProfile?.(post.author.username)}
+          onClick={() => onOpenProfile?.(view.author.username)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          {post.author.avatarUrl ? (
+          {view.author.avatarUrl ? (
             <img
-              src={mediaSrc(post.author.avatarUrl)}
+              src={mediaSrc(view.author.avatarUrl)}
               alt=""
               className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-vibra-border"
             />
           ) : (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold">
-              {post.author.displayName.charAt(0).toUpperCase()}
+              {view.author.displayName.charAt(0).toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">
               <span className="inline-flex max-w-full items-center gap-1">
-                <span className="truncate">{maskDisplayName(post.author.displayName)}</span>
-                {post.author.isVerified ? <VerifiedBadge className="h-3.5 w-3.5" /> : null}
+                <span className="truncate">{maskDisplayName(view.author.displayName)}</span>
+                {view.author.isVerified ? <VerifiedBadge className="h-3.5 w-3.5" /> : null}
               </span>
             </p>
             <p className="truncate text-xs text-zinc-500">
-              @{post.author.username} · {formatPostDate(post.createdAt)}
+              @{view.author.username} · {formatPostDate(view.createdAt)}
             </p>
           </div>
         </button>
-        {post.visibility === 'PAID' ? (
+        {view.visibility === 'PAID' ? (
           <span className="rounded-full bg-vibra-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vibra-gold">
             Pago
           </span>
@@ -116,48 +154,78 @@ export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
         )}
       </header>
 
-      {post.text ? (
+      {view.text ? (
         <p className="whitespace-pre-wrap px-4 pb-3 text-sm leading-relaxed text-zinc-200">
-          {post.text}
+          {view.text}
         </p>
       ) : null}
 
       {current ? (
         <div className="relative aspect-[4/5] bg-zinc-900">
-          {current.kind === 'VIDEO' ? (
-            <video
-              key={current.id}
-              src={mediaSrc(current.url)}
-              className={cn(
-                'h-full w-full object-cover',
-                post.locked && 'scale-110 blur-2xl brightness-50 saturate-50',
-              )}
-              controls={!post.locked}
-              playsInline
-              muted={post.locked}
-            />
+          {!view.locked && current.url ? (
+            current.kind === 'VIDEO' ? (
+              <video
+                key={current.id}
+                src={mediaSrc(current.url)}
+                className="h-full w-full object-cover"
+                controls
+                playsInline
+              />
+            ) : (
+              <img
+                src={mediaSrc(current.url)}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            )
           ) : (
-            <img
-              src={mediaSrc(current.url)}
-              alt=""
-              className={cn(
-                'h-full w-full object-cover transition',
-                post.locked && 'scale-110 blur-2xl brightness-50 saturate-50',
-              )}
-            />
+            <div className="h-full w-full bg-gradient-to-b from-zinc-800 to-zinc-950" />
           )}
 
-          {post.locked ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-t from-black/80 via-black/40 to-black/20 px-6 text-center">
+          {view.locked ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55 px-6 text-center">
               <Lock className="h-8 w-8 text-vibra-gold" />
-              <p className="text-sm font-semibold text-white">Contenido exclusivo</p>
-              <p className="text-xs text-zinc-300">
-                Desbloquea por {post.priceCredits ?? 100} créditos
-              </p>
+              <div>
+                <p className="text-sm font-semibold text-white">Contenido exclusivo</p>
+                <p className="mt-1 text-xs text-zinc-300">
+                  Paga {price} créditos para verlo completo
+                </p>
+                <p className="mt-0.5 text-[11px] text-zinc-500">Tu saldo: {balance} créd</p>
+              </div>
+              <button
+                type="button"
+                disabled={unlockMutation.isPending}
+                onClick={() => {
+                  setPayError(null);
+                  if (!canAfford) {
+                    setPayError(`Necesitas ${price} créditos. Saldo: ${balance}`);
+                    return;
+                  }
+                  unlockMutation.mutate();
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-vibra-gold px-5 py-2.5 text-sm font-bold text-black shadow-lg transition hover:bg-vibra-gold/90 disabled:opacity-50"
+              >
+                <Coins className="h-4 w-4" />
+                {unlockMutation.isPending ? 'Pagando…' : `Pagar ${price} créd`}
+              </button>
+              {payError ? (
+                <div className="space-y-1">
+                  <p className="text-xs text-red-300">{payError}</p>
+                  {!canAfford ? (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/credits')}
+                      className="text-xs font-semibold text-vibra-gold underline"
+                    >
+                      Comprar créditos
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
-          {slides.length > 1 && !post.locked ? (
+          {slides.length > 1 && !view.locked ? (
             <>
               <button
                 type="button"
@@ -255,7 +323,7 @@ export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => onOpenProfile?.(post.author.username)}
+              onClick={() => onOpenProfile?.(view.author.username)}
               className="relative z-10 ml-auto inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm text-zinc-300 hover:text-white"
             >
               <UserRound className="pointer-events-none h-5 w-5 shrink-0" />
@@ -266,7 +334,7 @@ export function PostCard({ post, onOpenProfile, hideFollow = false }: Props) {
       </div>
 
       <PostCommentsInline
-        postId={post.id}
+        postId={view.id}
         open={commentsOpen}
         onCountChange={setCommentsCount}
       />

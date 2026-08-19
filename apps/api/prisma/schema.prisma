@@ -37,6 +37,7 @@ enum TransactionType {
   REFUND
   ADMIN_ADJUST
   PAYOUT
+  POST_UNLOCK
 }
 
 enum CreditPurchaseStatus {
@@ -136,6 +137,7 @@ model User {
   posts                Post[]
   postLikes            PostLike[]
   postComments         PostComment[]
+  postUnlocks          PostUnlock[]
 
   @@index([role])
   @@index([isActive])
@@ -414,6 +416,7 @@ model Post {
   media    PostMedia[]
   likes    PostLike[]
   comments PostComment[]
+  unlocks  PostUnlock[]
 
   @@index([authorId, createdAt])
   @@index([createdAt])
@@ -461,6 +464,21 @@ model PostComment {
   @@index([postId, createdAt])
   @@index([userId])
   @@map("post_comments")
+}
+
+model PostUnlock {
+  id          String   @id @default(uuid()) @db.Uuid
+  postId      String   @map("post_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  creditsPaid Int      @map("credits_paid")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+  @@map("post_unlocks")
 }
 
 /** Rotating admin unlock key (plaintext for you to copy from DB; hash used to verify). */

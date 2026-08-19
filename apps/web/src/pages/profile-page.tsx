@@ -530,7 +530,11 @@ export function ProfilePage() {
             className="relative max-h-[90dvh] w-full max-w-lg overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <PostCard post={openPost} hideFollow={isOwner} />
+            <PostCard
+              post={openPost}
+              hideFollow={isOwner}
+              onUnlocked={(updated) => setOpenPost(updated)}
+            />
           </div>
         </div>
       ) : null}

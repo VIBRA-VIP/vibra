@@ -78,3 +78,13 @@ export async function addPostCommentRequest(postId: string, text: string) {
   const { data } = await api.post<PostCommentDto>(`/api/posts/${postId}/comments`, { text });
   return data;
 }
+
+export type UnlockPostResponse = {
+  post: FeedPostDto;
+  clientBalance: number | null;
+};
+
+export async function unlockPostRequest(postId: string) {
+  const { data } = await api.post<UnlockPostResponse>(`/api/posts/${postId}/unlock`);
+  return data;
+}

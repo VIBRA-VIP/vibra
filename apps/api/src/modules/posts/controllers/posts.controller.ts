@@ -35,6 +35,12 @@ export class PostsController {
     return this.postsService.listByAuthor(authorId, user.id, take ? Number(take) : 40);
   }
 
+  @Post(':id/unlock')
+  @UseGuards(JwtAuthGuard)
+  unlock(@CurrentUser() user: { id: string }, @Param('id', ParseUUIDPipe) id: string) {
+    return this.postsService.unlock(user.id, id);
+  }
+
   @Post(':id/like')
   @UseGuards(JwtAuthGuard)
   like(@CurrentUser() user: { id: string }, @Param('id', ParseUUIDPipe) id: string) {

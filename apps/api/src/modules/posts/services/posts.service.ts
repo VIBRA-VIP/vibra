@@ -249,6 +249,11 @@ export class PostsService {
         select: { id: true },
         take: 1,
       },
+      unlocks: {
+        where: { userId: viewerId },
+        select: { id: true },
+        take: 1,
+      },
     };
   }
 
@@ -282,13 +287,15 @@ export class PostsService {
       media: { id: string; url: string; kind: 'IMAGE' | 'VIDEO'; sortOrder: number }[];
       _count: { likes: number; comments: number };
       likes: { id: string }[];
+      unlocks?: { id: string }[];
     },
     viewerId: string,
     isFollowing: boolean,
   ) {
     const isOwner = post.authorId === viewerId;
     const isPaid = post.visibility === PostVisibility.PAID;
-    const locked = isPaid && !isOwner;
+    const unlocked = isOwner || (post.unlocks?.length ?? 0) > 0;
+    const locked = isPaid && !unlocked;
     const price = post.priceCredits ?? post.author.profile?.contentPrice ?? 100;
 
     return {
@@ -312,10 +319,123 @@ export class PostsService {
       media: post.media.map((m) => ({
         id: m.id,
         kind: m.kind,
-        // Paid content: still send url so client can blur; unlock flow can come later
-        url: m.url,
+        url: locked ? '' : m.url,
         sortOrder: m.sortOrder,
       })),
+    };
+  }
+
+  async unlock(userId: string, postId: string) {
+    const existing = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: this.postInclude(userId),
+    });
+    if (!existing) throw new NotFoundException('Publicación no encontrada');
+
+    const following = await this.favoriteSet(userId, [existing.authorId]);
+    const isFollowing = following.has(existing.authorId);
+
+    if (existing.authorId === userId || existing.visibility !== PostVisibility.PAID) {
+      return {
+        post: this.mapPost(existing, userId, isFollowing),
+        clientBalance: null as number | null,
+      };
+    }
+
+    if ((existing.unlocks?.length ?? 0) > 0) {
+      return {
+        post: this.mapPost(existing, userId, isFollowing),
+        clientBalance: null as number | null,
+      };
+    }
+
+    const buyer = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (!buyer || buyer.role !== UserRole.CLIENT) {
+      throw new ForbiddenException('Solo los clientes pueden desbloquear contenido de pago');
+    }
+
+    const price = Math.max(
+      1,
+      existing.priceCredits ?? existing.author.profile?.contentPrice ?? 100,
+    );
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const already = await tx.postUnlock.findUnique({
+        where: { postId_userId: { postId, userId } },
+      });
+      if (already) {
+        return { clientAfter: null as number | null };
+      }
+
+      let clientWallet = await tx.wallet.findUnique({ where: { userId } });
+      if (!clientWallet) {
+        clientWallet = await tx.wallet.create({ data: { userId } });
+      }
+      if (clientWallet.balance < price) {
+        throw new BadRequestException(
+          `Saldo insuficiente. Necesitas ${price} créditos. Saldo: ${clientWallet.balance}`,
+        );
+      }
+
+      const clientAfter = clientWallet.balance - price;
+      await tx.wallet.update({
+        where: { id: clientWallet.id },
+        data: { balance: clientAfter },
+      });
+      await tx.creditTransaction.create({
+        data: {
+          walletId: clientWallet.id,
+          userId,
+          type: 'POST_UNLOCK',
+          amount: -price,
+          balanceAfter: clientAfter,
+          description: `Desbloqueo publicación (${price} créd)`,
+          referenceId: postId,
+        },
+      });
+
+      let modelWallet = await tx.wallet.findUnique({
+        where: { userId: existing.authorId },
+      });
+      if (!modelWallet) {
+        modelWallet = await tx.wallet.create({ data: { userId: existing.authorId } });
+      }
+      const modelAfter = modelWallet.balance + price;
+      await tx.wallet.update({
+        where: { id: modelWallet.id },
+        data: { balance: modelAfter },
+      });
+      await tx.creditTransaction.create({
+        data: {
+          walletId: modelWallet.id,
+          userId: existing.authorId,
+          type: 'POST_UNLOCK',
+          amount: price,
+          balanceAfter: modelAfter,
+          description: `Ingreso contenido de pago (${price} créd)`,
+          referenceId: postId,
+        },
+      });
+
+      await tx.postUnlock.create({
+        data: { postId, userId, creditsPaid: price },
+      });
+
+      return { clientAfter };
+    });
+
+    const unlocked = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: this.postInclude(userId),
+    });
+    if (!unlocked) throw new NotFoundException('Publicación no encontrada');
+
+    return {
+      post: this.mapPost(unlocked, userId, isFollowing),
+      clientBalance: result.clientAfter,
     };
   }
 }
