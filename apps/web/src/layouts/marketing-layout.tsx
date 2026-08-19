@@ -8,7 +8,10 @@ export function MarketingLayout() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Logo />
           <div className="flex items-center gap-3">
-            <NavLink to="/login" className="hidden text-sm text-zinc-300 hover:text-white sm:inline">
+            <NavLink
+              to="/login"
+              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-zinc-200 hover:text-white"
+            >
               Iniciar sesión
             </NavLink>
             <NavLink
