@@ -250,22 +250,19 @@ export function RegisterPage() {
           className={inputClass}
         />
 
-        <div className="space-y-2">
-          <p className="text-sm text-zinc-400">País</p>
-          <select
-            required
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            aria-label="País"
-            className={inputClass}
-          >
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {getCountryFlagEmoji(c.code)} {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          required
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          aria-label="País"
+          className={inputClass}
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {getCountryFlagEmoji(c.code)} {c.name}
+            </option>
+          ))}
+        </select>
 
         <label className="flex items-start gap-3 text-sm text-zinc-300">
           <input
